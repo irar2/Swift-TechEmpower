@@ -5,7 +5,11 @@ import SwiftyJSON
 
 let router = Router()
 
-typealias JSONDictionary = [String: Any]
+#if os(OSX)
+    typealias JSONDictionary = [String: AnyObject]
+#else
+    typealias JSONDictionary = [String: Any]
+#endif
 
 // Return a simple JSON dictionary with one element
 func helloWorldDict() -> JSONDictionary {
@@ -15,8 +19,9 @@ func helloWorldDict() -> JSONDictionary {
 }
 
 // Hello World
-router.get("/hello") {
+router.get("/plaintext") {
 request, response, next in
+    response.setHeader("Content-Type", value: "text/plain")
     response.status(HttpStatusCode.OK).send("Hello, world!")
     next()
 }
@@ -50,6 +55,6 @@ request, response, next in
 }
 
 
-let server = HttpServer.listen(8090, delegate: router)
+let server = HttpServer.listen(8080, delegate: router)
 Server.run()
 
