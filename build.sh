@@ -14,7 +14,7 @@ fi
 # Build type
 case "$1" in
 release)
-  BUILDFLAGS="-c release"
+  BUILDFLAGS="--configuration release"
   ;;
 debug)
   BUILDFLAGS=""
@@ -27,7 +27,8 @@ esac
 # Build flags for Kitura appropriate for current OS
 case `uname` in
 Linux)
-  KITURA_BUILDFLAGS="-Xcc -fblocks"
+  #KITURA_BUILDFLAGS="-Xcc -fblocks -Xlinker -rpath -Xlinker .build/$1"
+  KITURA_BUILDFLAGS="-Xcc -fblocks -Xlinker -rpath=\$ORIGIN"
   ;;
 Darwin)
   KITURA_BUILDFLAGS="-Xcc -fblocks -Xswiftc -I/usr/local/include -Xlinker -L/usr/local/lib"

@@ -34,11 +34,11 @@ request, response, next in
 //    jsonObject["message"] = "Hello, World!"
 //    var result = JSON(jsonObject)
 // or:
-//    var result = JSON(["message":"Hello, World!"])
+//    var result = JSON(helloWorldDict())
 // or:
-    var result = JSON(helloWorldDict())
+    var result = JSON(["message":"Hello, World!"])
     response.setHeader("Server", value: "Kitura-TechEmpower")
-    response.status(HttpStatusCode.OK).sendJson(result)
+    response.status(HttpStatusCode.OK).send(json: result)
     next()
 }
 
@@ -50,11 +50,10 @@ request, response, next in
     // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
 
     var result = JSON(["message":"TODO"])
-    response.status(HttpStatusCode.OK).sendJson(result)
+    response.status(HttpStatusCode.OK).send(json: result)
     next()
 }
 
 
-let server = HttpServer.listen(8080, delegate: router)
+let server = HttpServer.listen(port: 8080, delegate: router)
 Server.run()
-
