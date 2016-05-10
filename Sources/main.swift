@@ -22,7 +22,7 @@ func helloWorldDict() -> JSONDictionary {
 router.get("/plaintext") {
 request, response, next in
     response.setHeader("Content-Type", value: "text/plain")
-    response.status(HttpStatusCode.OK).send("Hello, world!")
+    response.status(.OK).send("Hello, world!")
     next()
 }
 
@@ -38,7 +38,7 @@ request, response, next in
 // or:
     var result = JSON(["message":"Hello, World!"])
     response.setHeader("Server", value: "Kitura-TechEmpower")
-    response.status(HttpStatusCode.OK).send(json: result)
+    response.status(.OK).send(json: result)
     next()
 }
 
@@ -50,10 +50,14 @@ request, response, next in
     // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
 
     var result = JSON(["message":"TODO"])
-    response.status(HttpStatusCode.OK).send(json: result)
+    response.status(.OK).send(json: result)
     next()
 }
 
+//router.get("/headers") {
+//request, response, next in
+//for header in request.headers
 
-let server = HttpServer.listen(port: 8080, delegate: router)
+
+let server = HTTPServer.listen(port: 8080, delegate: router)
 Server.run()

@@ -2,9 +2,9 @@
 
 # First time setup:
 # Mac:
-# brew install http-parser pcre2 curl hiredis
+# brew install curl
 # Linux:
-# sudo apt-get install libhttp-parser-dev libcurl4-openssl-dev libhiredis-dev
+# sudo apt-get install autoconf libtool libkqueue-dev libkqueue0 libcurl4-openssl-dev libbsd-dev libblocksruntime-dev
 
 if [ -z "$1" ]; then
   echo "Specify build type (release or debug)"
@@ -27,11 +27,12 @@ esac
 # Build flags for Kitura appropriate for current OS
 case `uname` in
 Linux)
-  #KITURA_BUILDFLAGS="-Xcc -fblocks -Xlinker -rpath -Xlinker .build/$1"
-  KITURA_BUILDFLAGS="-Xcc -fblocks -Xlinker -rpath=\$ORIGIN"
+  #KITURA_BUILDFLAGS="-Xcc -fblocks -Xlinker -rpath=\$ORIGIN"
+  KITURA_BUILDFLAGS="-Xcc -fblocks"
   ;;
 Darwin)
-  KITURA_BUILDFLAGS="-Xcc -fblocks -Xswiftc -I/usr/local/include -Xlinker -L/usr/local/lib"
+  #KITURA_BUILDFLAGS="-Xcc -fblocks -Xswiftc -I/usr/local/include -Xlinker -L/usr/local/lib"
+  KITURA_BUILDFLAGS=""
   ;;
 *)
   echo "Unknown OS `uname`"
