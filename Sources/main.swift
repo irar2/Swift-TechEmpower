@@ -5,20 +5,7 @@ import SwiftyJSON
 
 let router = Router()
 
-#if os(OSX)
-    typealias JSONDictionary = [String: AnyObject]
-#else
-    typealias JSONDictionary = [String: Any]
-#endif
-
-// Return a simple JSON dictionary with one element
-func helloWorldDict() -> JSONDictionary {
-  var result = JSONDictionary()
-  result["message"] = "Hello, World!"
-  return result
-}
-
-// Hello World
+// TechEmpower test 0: plaintext
 router.get("/plaintext") {
 request, response, next in
     response.setHeader("Content-Type", value: "text/plain")
@@ -29,13 +16,6 @@ request, response, next in
 // TechEmpower test 1: JSON serialization
 router.get("/json") {
 request, response, next in
-// Basic implementation
-//    var jsonObject = JSONDictionary()
-//    jsonObject["message"] = "Hello, World!"
-//    var result = JSON(jsonObject)
-// or:
-//    var result = JSON(helloWorldDict())
-// or:
     var result = JSON(["message":"Hello, World!"])
     response.setHeader("Server", value: "Kitura-TechEmpower")
     response.status(.OK).send(json: result)
