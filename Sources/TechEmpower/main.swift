@@ -2,6 +2,7 @@ import Kitura
 import KituraNet
 import KituraSys
 import SwiftyJSON
+import Foundation
 
 let router = Router()
 
@@ -33,11 +34,6 @@ request, response, next in
     response.status(.OK).send(json: result)
     next()
 }
-
-//router.get("/headers") {
-//request, response, next in
-//for header in request.headers
-
 
 let server = HTTPServer.listen(port: 8080, delegate: router)
 Server.run()
