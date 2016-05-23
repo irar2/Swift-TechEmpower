@@ -8,7 +8,7 @@ let router = Router()
 // TechEmpower test 0: plaintext
 router.get("/plaintext") {
 request, response, next in
-    response.setHeader("Content-Type", value: "text/plain")
+    response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
     next()
 }
@@ -17,7 +17,7 @@ request, response, next in
 router.get("/json") {
 request, response, next in
     var result = JSON(["message":"Hello, World!"])
-    response.setHeader("Server", value: "Kitura-TechEmpower")
+    response.headers["Server"] = "Kitura-TechEmpower"
     response.status(.OK).send(json: result)
     next()
 }
