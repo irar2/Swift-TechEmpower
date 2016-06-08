@@ -50,6 +50,5 @@ request, response, next in
   next()
 }
 
-
-let server = HTTPServer.listen(port: 8080, delegate: router)
-Server.run()
+Kitura.addHTTPServer(onPort: 8080, with: router)
+Kitura.run()
