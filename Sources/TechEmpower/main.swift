@@ -32,7 +32,9 @@ router.get("/plaintext") {
 request, response, next in
     response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
-    next()
+    // next()
+    // Avoid slowdown walking remaining routes
+    try response.end()
 }
 
 // TechEmpower test 1: JSON serialization
@@ -41,7 +43,9 @@ request, response, next in
     var result = JSON(["message":"Hello, World!"])
     response.headers["Server"] = "Kitura-TechEmpower"
     response.status(.OK).send(json: result)
-    next()
+    // next()
+    // Avoid slowdown walking remaining routes
+    try response.end()
 }
 
 // Create DB
