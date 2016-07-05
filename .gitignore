@@ -2,3 +2,6 @@
 /.build
 /Packages
 /*.xcodeproj
+kitura/Packages
+kitura/.build
+kitura/*.xcodeproj
