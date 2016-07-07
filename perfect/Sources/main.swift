@@ -38,7 +38,7 @@ Routing.Routes["/"] = {
 
 Routing.Routes["/plaintext"] = {
     request, response in
-    response.setHeader("Content-Type", "text/plain")
+    response.setHeader(.contentType, value: "text/plain")
     response.appendBody(string: "Hello, World!")
     response.completed()
 }
