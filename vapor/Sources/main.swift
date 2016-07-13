@@ -1,8 +1,7 @@
 import Vapor
 
-//Log.enabledLevels = [.Error, .Fatal]
-
 let app = Application()
+app.log.enabled = [.error, .fatal]
 
 /**
 	This first route will return the welcome.html
