@@ -10,9 +10,15 @@ router.get("/headers") {
 request, response, next in
 
   // Multiple Set-Cookie headers
+#if os(Linux)
   response.cookies["Boo"] = NSHTTPCookie(properties: [NSHTTPCookiePath: "/blah", NSHTTPCookieName: "Boo", NSHTTPCookieValue: "Yah", NSHTTPCookieDomain: "foo.bar.com"])
   response.cookies["Foo"] = NSHTTPCookie(properties: [NSHTTPCookiePath: "/fred", NSHTTPCookieName: "Foo", NSHTTPCookieValue: "Bar", NSHTTPCookieDomain: "foo.bar.com"])
   response.cookies["Baz"] = NSHTTPCookie(properties: [NSHTTPCookiePath: "/wibble", NSHTTPCookieName: "Baz", NSHTTPCookieValue: "Off", NSHTTPCookieDomain: "foo.bar.com"])
+#else
+  response.cookies["Boo"] = HTTPCookie(properties: [.path: "/blah", .name: "Boo", .value: "Yah", .domain: "foo.bar.com"])
+  response.cookies["Foo"] = HTTPCookie(properties: [.path: "/fred", .name: "Foo", .value: "Bar", .domain: "foo.bar.com"])
+  response.cookies["Baz"] = HTTPCookie(properties: [.path: "/wibble", .name: "Baz", .value: "Off", .domain: "foo.bar.com"])
+#endif
 
   // A header with multiple values
   response.headers.append("MultipleValues", value: "Foo")
