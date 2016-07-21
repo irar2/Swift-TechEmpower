@@ -14,39 +14,38 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-# Build type
-case "$1" in
-release)
-  BUILDFLAGS="--configuration release"
-  ;;
-debug)
-  BUILDFLAGS=""
-  ;;
-fetch|devel)
-  BUILDFLAGS="--fetch"
-  ;;
-*)
-  echo "Build type '$1' is not 'release' or 'debug' - building debug"
-  BUILDFLAGS=""
-esac
-
 # Build flags for Kitura appropriate for current OS
 case `uname` in
 Linux)
-  #KITURA_BUILDFLAGS="-Xcc -fblocks -Xlinker -rpath=\$ORIGIN"
-  KITURA_BUILDFLAGS="-Xcc -fblocks"
+  KITURA_BUILDFLAGS="-Xcc -fblocks -Xcc -I/usr/include/postgresql"
   ;;
 Darwin)
-  #KITURA_BUILDFLAGS="-Xcc -fblocks -Xswiftc -I/usr/local/include -Xlinker -L/usr/local/lib"
-  KITURA_BUILDFLAGS=""
+  KITURA_BUILDFLAGS="-Xcc -I/usr/include/postgresql"
   ;;
 *)
   echo "Unknown OS `uname`"
   exit 1
 esac
 
-swift build --clean
-swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+# Build type
+case "$1" in
+release)
+  BUILDFLAGS="--configuration release"
+  swift build --clean
+  swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+  ;;
+debug)
+  BUILDFLAGS=""
+  swift build --clean
+  swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+  ;;
+fetch|devel)
+  swift package fetch
+  ;;
+*)
+  echo "Build type '$1' is not 'release' or 'debug', not building"
+esac
+
 
 # For 'devel', convert dependencies to full clones, so that all branches are available
 case "$1" in
