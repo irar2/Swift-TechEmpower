@@ -48,6 +48,39 @@ request, response, next in
     try response.end()
 }
 
+// TechEmpower test 2: Single database query
+router.get("/db") {
+request, response, next in
+    // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
+    // Convert to object using object-relational mapping (ORM) tool
+    // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
+
+#if os(Linux)
+        let rnd = Int(random() % dbRows) + 1
+#else
+        let rnd = Int(arc4random_uniform(UInt32(dbRows)))
+#endif
+    world.retrieve("\(rnd)") {
+      (json: JSON?, err: NSError?) in
+      if let err = err {
+        print("Error: \(err.localizedDescription) Code: \(err.code), rnd=\(rnd)")
+        response.status(.badRequest).send("Error: \(err.localizedDescription) Code: \(err.code)")
+        return
+      }
+      guard let json = json else {
+        print("Error: no result returned for record \(rnd)")
+        response.status(.badRequest).send("Error: no result returned for record \(rnd)")
+        return
+      }
+      //response.status(.OK).send(json: json)
+      // Dispose of '_rev' field
+      response.status(.OK).send(json: JSON(["_id":json["_id"], "randomNumber":json["randomNumber"]]))
+    }
+    // next()
+    // Avoid slowdown walking remaining routes
+    try response.end()
+}
+
 // Create DB
 router.get("/create") {
 request, response, next in
@@ -63,7 +96,7 @@ request, response, next in
     next()
 }
 
-// Create DB
+// Delete DB
 router.get("/delete") {
 request, response, next in
     couchDBClient.deleteDB(dbName) {
@@ -108,35 +141,6 @@ request, response, next in
       if (!keepGoing) { break populate }
     }
     response.send((keepGoing ? "</pre><p>Done.</p>" : "</pre><p>Failed.</p>"))
-    next()
-}
-
-// TechEmpower test 2: Single database query
-router.get("/db") {
-request, response, next in
-    // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
-    // Convert to object using object-relational mapping (ORM) tool
-    // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
-
-#if os(Linux)
-        let rnd = Int(random() % dbRows)
-#else
-        let rnd = Int(arc4random_uniform(UInt32(dbRows)))
-#endif
-    world.retrieve("\(rnd)") {
-      (json: JSON?, err: NSError?) in
-      if let err = err {
-        response.status(.badRequest).send("Error: \(err.localizedDescription) Code: \(err.code)")
-        return
-      }
-      guard let json = json else {
-        response.status(.badRequest).send("Error: no result returned for record \(rnd)")
-        return
-      }
-      //response.status(.OK).send(json: json)
-      // Dispose of '_rev' field
-      response.status(.OK).send(json: JSON(["_id":json["_id"], "randomNumber":json["randomNumber"]]))
-    }
     next()
 }
 
