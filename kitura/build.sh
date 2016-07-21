@@ -17,10 +17,12 @@ fi
 # Build flags for Kitura appropriate for current OS
 case `uname` in
 Linux)
+  # Add include for postgres
   KITURA_BUILDFLAGS="-Xcc -fblocks -Xcc -I/usr/include/postgresql"
   ;;
 Darwin)
-  KITURA_BUILDFLAGS="-Xcc -I/usr/include/postgresql"
+  # Add include and libpath for postgres
+  KITURA_BUILDFLAGS="-Xcc -I/usr/local/include -Xlinker -L/usr/local/lib/"
   ;;
 *)
   echo "Unknown OS `uname`"
