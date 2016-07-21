@@ -1,6 +1,6 @@
 import Vapor
 
-let app = Application()
+let app = Droplet()
 app.log.enabled = [.error, .fatal]
 
 /**
@@ -33,4 +33,4 @@ app.get("json") { request in
 
 // Print what link to visit for default port
 print("Visit http://localhost:8080")
-app.start()
+app.serve()
