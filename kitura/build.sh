@@ -11,6 +11,7 @@ if [ -z "$1" ]; then
   echo " or fetch (to just fetch dependencies),"
   echo " or devel (fetch dependencies and convert to full clones)"
   echo "  - for devel, optional 2nd argument is branch name to switch dependencies to"
+  echo "Optionally add --clean"
   exit 1
 fi
 
@@ -19,6 +20,8 @@ case `uname` in
 Linux)
   # Add include for postgres
   KITURA_BUILDFLAGS="-Xcc -fblocks -Xcc -I/usr/include/postgresql"
+  # Uncomment to switch to the cross-platform (DispatchSource) keepalive implementation
+  # KITURA_BUILDFLAGS="$KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH"
   ;;
 Darwin)
   # Add include and libpath for postgres
@@ -29,16 +32,19 @@ Darwin)
   exit 1
 esac
 
+# Clean if requested
+if [ "$2" = "--clean" ]; then
+  swift build --clean
+fi
+
 # Build type
 case "$1" in
 release)
   BUILDFLAGS="--configuration release"
-  swift build --clean
   swift build $KITURA_BUILDFLAGS $BUILDFLAGS
   ;;
 debug)
   BUILDFLAGS=""
-  swift build --clean
   swift build $KITURA_BUILDFLAGS $BUILDFLAGS
   ;;
 fetch|devel)
