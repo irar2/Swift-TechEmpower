@@ -17,23 +17,29 @@ let dbPort = Int32(5432)
 let dbName = "hello_world"
 let dbUser = "benchmarkdbuser"
 let dbPass = "benchmarkdbpass"
-var dbConn: PostgreSQL.Connection!
+let connectionString = try URI("postgres://\(dbUser):\(dbPass)@\(dbHost):\(dbPort)/\(dbName)")
 
 let dbRows = 100
 let maxValue = 10000
 
 // Connect to Postgres DB
-let connectionString = try URI("postgres://\(dbUser):\(dbPass)@\(dbHost):\(dbPort)/\(dbName)")
-do {
-  dbConn = try PostgreSQL.Connection(connectionString)
-  try dbConn.open()
-  guard dbConn.internalStatus == PostgreSQL.Connection.InternalStatus.OK else {
-    print("DB refused connection, status \(dbConn.internalStatus)")
+func newConn() -> PostgreSQL.Connection {
+  var dbConn:PostgreSQL.Connection!
+  do {
+    dbConn = try PostgreSQL.Connection(connectionString)
+    try dbConn.open()
+    guard dbConn.internalStatus == PostgreSQL.Connection.InternalStatus.OK else {
+      print("DB refused connection, status \(dbConn.internalStatus)")
+      exit(1)
+    }
+  } catch let error as PostgreSQL.Connection.Error {
+    print("Failed to connect to DB \(connectionString) (\(#function) at \(#line)): \(error.description)")
+    exit(1)
+  } catch {
+    print("Something else went wrong")
     exit(1)
   }
-} catch let error as PostgreSQL.Connection.Error {
-  print("Failed to connect to DB \(connectionString) (\(#function) at \(#line)): \(error.description)")
-  exit(1)
+  return dbConn
 }
 
 let router = Router()
@@ -70,6 +76,7 @@ request, response, next in
 #else
         let rnd = Int(arc4random_uniform(UInt32(dbRows)))
 #endif
+    let dbConn = newConn()
     do {
       let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
 // This next line crashes with multiple threads...
@@ -106,6 +113,7 @@ request, response, next in
 // Create table 
 router.get("/create") {
 request, response, next in
+    let dbConn = newConn()
     do {
       let query = "CREATE TABLE \"World\" ("
         + "id integer NOT NULL,"
@@ -128,6 +136,7 @@ request, response, next in
 // Delete table
 router.get("/delete") {
 request, response, next in
+    let dbConn = newConn()
     do {
       let query = "DROP TABLE IF EXISTS \"World\";"
       let result = try dbConn.execute(query)
@@ -146,6 +155,7 @@ request, response, next in
 // Populate DB with 10k rows
 router.get("/populate") {
 request, response, next in
+    let dbConn = newConn()
     response.status(.OK).send("<h3>Populating World table with \(dbRows) rows</h3><pre>")
     for i in 1...dbRows {
 #if os(Linux)
