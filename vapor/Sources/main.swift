@@ -1,4 +1,5 @@
 import Vapor
+import HTTP
 
 let app = Droplet()
 app.log.enabled = [.error, .fatal]
@@ -26,7 +27,7 @@ app.get("plaintext") { request in
 
 // TechEmpower test 1: JSON serialization
 app.get("json") { request in
-    return JSON([
+    return try JSON([
             "message":"Hello, World!"
         ])
 }
