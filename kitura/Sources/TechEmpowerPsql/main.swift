@@ -3,7 +3,6 @@ import KituraNet
 import KituraSys
 import SwiftyJSON
 import Foundation
-import SQL
 import PostgreSQL
 
 #if os(Linux)
@@ -17,26 +16,17 @@ let dbPort = Int32(5432)
 let dbName = "hello_world"
 let dbUser = "benchmarkdbuser"
 let dbPass = "benchmarkdbpass"
-let connectionString = try URI("postgres://\(dbUser):\(dbPass)@\(dbHost):\(dbPort)/\(dbName)")
+let connectionString = "host=\(dbHost) port=\(dbPort) dbname=\(dbName) user=\(dbUser) password=\(dbPass)"
 
 let dbRows = 100
 let maxValue = 10000
 
 // Connect to Postgres DB
-func newConn() -> PostgreSQL.Connection {
-  var dbConn:PostgreSQL.Connection!
-  do {
-    dbConn = try PostgreSQL.Connection(connectionString)
-    try dbConn.open()
-    guard dbConn.internalStatus == PostgreSQL.Connection.InternalStatus.OK else {
-      print("DB refused connection, status \(dbConn.internalStatus)")
-      exit(1)
-    }
-  } catch let error as PostgreSQL.Connection.Error {
-    print("Failed to connect to DB \(connectionString) (\(#function) at \(#line)): \(error.description)")
-    exit(1)
-  } catch {
-    print("Something else went wrong")
+func newConn() -> PGConnection {
+  let dbConn = PGConnection()
+  let status = dbConn.connectdb(connectionString)
+  guard status == .ok else {
+    print("DB refused connection, status \(status)")
     exit(1)
   }
   return dbConn
@@ -77,32 +67,28 @@ request, response, next in
         let rnd = Int(arc4random_uniform(UInt32(dbRows)))
 #endif
     let dbConn = newConn()
-    do {
-      let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
-// This next line crashes with multiple threads...
-      let result = try dbConn.execute(query)
-      guard result.status == PostgreSQL.Result.Status.TuplesOK else {
-        try response.status(.badRequest).send("Failed query: '\(query)' - status \(result.status)").end()
-        return
-      }
-      guard result.count == 1 else {
-        try response.status(.badRequest).send("Error: query '\(query)' returned \(result.count) rows, expected 1").end()
-        return
-      }
-      do {
-        let randomStr = String(try result[0].data("randomNumber"))
-        if let randomNumber = Int(randomStr) {
-          response.status(.OK).send(json: JSON(["id":"\(rnd)", "randomNumber":"\(randomNumber)"]))
-        } else {
-          try response.status(.badRequest).send("Error: could not parse result as a number: \(randomStr)").end()
-          return
-        }
-      } catch {
-        try response.status(.badRequest).send("Error: randomNumber field not found in result: \(result[0]), \(error)").end()
-        return
-      }
-    } catch let error as PostgreSQL.Connection.Error {
-      try response.status(.badRequest).send("Failed to query DB (\(#function) at \(#line)): \(error.description)").end()
+    let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
+    let result = dbConn.exec(statement: query)
+    guard result.status() == PGResult.StatusType.tuplesOK else {
+      try response.status(.badRequest).send("Failed query: '\(query)' - status \(result.status())").end()
+      return
+    }
+    guard result.numTuples() == 1 else {
+      try response.status(.badRequest).send("Error: query '\(query)' returned \(result.numTuples()) rows, expected 1").end()
+      return
+    }
+    guard result.numFields() == 1 else {
+      try response.status(.badRequest).send("Error: expected single randomNumber field but query returned: \(result.numFields()) fields").end()
+      return
+    }
+    guard let randomStr = result.getFieldString(tupleIndex: 0, fieldIndex: 0) else {
+      try response.status(.badRequest).send("Error: could not get field as a String").end()
+      return
+    }
+    if let randomNumber = Int(randomStr) {
+      response.status(.OK).send(json: JSON(["id":"\(rnd)", "randomNumber":"\(randomNumber)"]))
+    } else {
+      try response.status(.badRequest).send("Error: could not parse result as a number: \(randomStr)").end()
       return
     }
     // next()
@@ -114,19 +100,14 @@ request, response, next in
 router.get("/create") {
 request, response, next in
     let dbConn = newConn()
-    do {
-      let query = "CREATE TABLE \"World\" ("
+    let query = "CREATE TABLE \"World\" ("
         + "id integer NOT NULL,"
         + "\"randomNumber\" integer NOT NULL default 0,"
         + "PRIMARY KEY  (id)"
         + ");"
-      let result = try dbConn.execute(query)
-      guard result.status == PostgreSQL.Result.Status.CommandOK else {
-          try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status)</pre>").end()
-          return
-      }
-    } catch {
-      try response.status(.badRequest).send("Failed to query DB (\(#function) at \(#line))").end()
+    let result = dbConn.exec(statement: query)
+    guard result.status() == PGResult.StatusType.commandOK else {
+      try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()
       return
     }
     response.send("<h3>Table 'World' created</h3>")
@@ -137,15 +118,10 @@ request, response, next in
 router.get("/delete") {
 request, response, next in
     let dbConn = newConn()
-    do {
-      let query = "DROP TABLE IF EXISTS \"World\";"
-      let result = try dbConn.execute(query)
-      guard result.status == PostgreSQL.Result.Status.CommandOK else {
-          try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status)</pre>").end()
-          return
-      }
-    } catch {
-      try response.status(.badRequest).send("Failed to query DB (\(#function) at \(#line))").end()
+    let query = "DROP TABLE IF EXISTS \"World\";"
+    let result = dbConn.exec(statement: query)
+    guard result.status() == PGResult.StatusType.commandOK else {
+      try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()
       return
     }
     response.send("<h3>Table 'World' deleted</h3>")
@@ -159,22 +135,17 @@ request, response, next in
     response.status(.OK).send("<h3>Populating World table with \(dbRows) rows</h3><pre>")
     for i in 1...dbRows {
 #if os(Linux)
-        let rnd = Int(random() % maxValue)
+      let rnd = Int(random() % maxValue)
 #else
-        let rnd = Int(arc4random_uniform(UInt32(maxValue)))
+      let rnd = Int(arc4random_uniform(UInt32(maxValue)))
 #endif
-      do {
-        let query = "INSERT INTO \"World\" (id, \"randomNumber\") VALUES (\(i), \(rnd));"
-        let result = try dbConn.execute(query)
-        guard result.status == PostgreSQL.Result.Status.CommandOK else {
-          try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status)</pre>").end()
-          return
-        }
-        response.send(".")
-      } catch {
-        try response.status(.badRequest).send("Failed to query DB (\(#function) at \(#line))").end()
+      let query = "INSERT INTO \"World\" (id, \"randomNumber\") VALUES (\(i), \(rnd));"
+      let result = dbConn.exec(statement: query)
+      guard result.status() == PGResult.StatusType.commandOK else {
+        try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()
         return
       }
+      response.send(".")
     }
     response.send("</pre><p>Done.</p>")
     next()
