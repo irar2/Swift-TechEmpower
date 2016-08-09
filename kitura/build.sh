@@ -42,6 +42,11 @@ case "$1" in
 release)
   BUILDFLAGS="--configuration release"
   swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+  if [ "Linux" = `uname` ]; then
+    echo "Building GCD version to .build_gcd"
+    KITURA_BUILDFLAGS="$KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH --build-path .build_gcd"
+    swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+  fi
   ;;
 debug)
   BUILDFLAGS=""
