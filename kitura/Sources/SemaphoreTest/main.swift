@@ -25,7 +25,7 @@ request, response, next in
     dispatch_semaphore_signal(mySema)
 #else
     let ret = mySema.wait(timeout: .distantFuture)
-    if (ret == DispatchTimeoutResult.TimedOut) {
+    if (ret == DispatchTimeoutResult.timedOut) {
       response.status(.badRequest).send("Semaphore returned rc=\(ret)")
     } else {
       response.headers["Content-Type"] = "text/plain"
