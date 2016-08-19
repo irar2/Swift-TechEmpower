@@ -10,9 +10,9 @@ router.get("/headers") {
 request, response, next in
 
   // Multiple Set-Cookie headers
-  response.cookies["Boo"] = HTTPCookie(properties: ["Path": "/blah", "Name": "Boo", "Value": "Yah", "Domain": "foo.bar.com"])
-  response.cookies["Foo"] = HTTPCookie(properties: ["Path": "/fred", "Name": "Foo", "Value": "Bar", "Domain": "foo.bar.com"])
-  response.cookies["Baz"] = HTTPCookie(properties: ["Path": "/wibble", "Name": "Baz", "Value": "Off", "Domain": "foo.bar.com"])
+  response.cookies["Boo"] = HTTPCookie(properties: [.path: "/blah", .name: "Boo", .value: "Yah", .domain: "foo.bar.com"])
+  response.cookies["Foo"] = HTTPCookie(properties: [.path: "/fred", .name: "Foo", .value: "Bar", .domain: "foo.bar.com"])
+  response.cookies["Baz"] = HTTPCookie(properties: [.path: "/wibble", .name: "Baz", .value: "Off", .domain: "foo.bar.com"])
 
   // A header with multiple values
   response.headers.append("MultipleValues", value: "Foo")
