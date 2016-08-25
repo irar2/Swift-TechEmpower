@@ -18,36 +18,41 @@
 //
 
 import PerfectLib
+import PerfectHTTP
+import PerfectHTTPServer
 
-// Initialize base-level services
-PerfectServer.initializeServices()
+// Create HTTP server.
+let server = HTTPServer()
 
-// Create our webroot
-// This will serve all static content by default
-let webRoot = "./webroot"
-try Dir(webRoot).create()
-
-// Add our routes and such
 // Register your own routes and handlers
-Routing.Routes["/"] = {
-    request, response in
-    
-    response.appendBody(string: "<html><title>Hello, world!</title><body>Hello, world!</body></html>")
-    response.completed()
-}
+var routes = Routes()
+routes.add(method: .get, uri: "/plaintext", handler: {
+		request, response in
+		response.setHeader(.contentType, value: "text/plain")
+		response.appendBody(string: "Hello, World!")
+		response.completed()
+	}
+)
 
-Routing.Routes["/plaintext"] = {
-    request, response in
-    response.setHeader(.contentType, value: "text/plain")
-    response.appendBody(string: "Hello, World!")
-    response.completed()
-}
+// Add the routes to the server.
+server.addRoutes(routes)
+
+// Set a listen port of 8080
+server.serverPort = 8080
+
+// Set a document root.
+// This is optional. If you do not want to serve static content then do not set this.
+// Setting the document root will automatically add a static file handler for the route /**
+server.documentRoot = "./webroot"
+
+// Gather command line options and further configure the server.
+// Run the server with --help to see the list of supported arguments.
+// Command line arguments will supplant any of the values set above.
+//configureServer(server)
 
 do {
-    
-    // Launch the HTTP server on port 8080
-    try HTTPServer(documentRoot: webRoot).start(port: 8080)
-    
+	// Launch the HTTP server.
+	try server.start()
 } catch PerfectError.networkError(let err, let msg) {
-    print("Network error thrown: \(err) \(msg)")
+	print("Network error thrown: \(err) \(msg)")
 }
