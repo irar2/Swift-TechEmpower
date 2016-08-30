@@ -72,5 +72,7 @@ devel)
     fi
     cd $WORKDIR
   done
+  # Rebuild xcode project after updating dependencies
+  swift package generate-xcodeproj
   ;;
 esac
