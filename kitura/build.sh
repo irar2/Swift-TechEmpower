@@ -35,6 +35,9 @@ esac
 # Clean if requested
 if [ "$2" = "--clean" ]; then
   swift build --clean
+  if [ "Linux" = `uname` ]; then
+    rm -rf .build_gcd
+  fi
 fi
 
 # Build type
