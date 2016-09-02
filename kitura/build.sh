@@ -50,8 +50,13 @@ release)
   swift build $KITURA_BUILDFLAGS $BUILDFLAGS
   if [ "Linux" = $OSNAME ]; then
     echo "Building GCD version to .build_gcd"
-    KITURA_BUILDFLAGS="$KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH --build-path .build_gcd"
-    swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+    swift build $KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH --build-path .build_gcd $BUILDFLAGS
+    if [ -f /usr/local/lib/libtcmalloc.so ]; then
+	echo "Building tcmalloc version to .build_tcmalloc"
+	swift build $KITURA_BUILDFLAGS -Xlinker -L/usr/local/lib/ -Xlinker -ltcmalloc --build-path .build_tcmalloc $BUILDFLAGS
+	echo "Building gcd + tcmalloc version to .build_gcd_tcmalloc"
+	swift build $KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH -Xlinker -L/usr/local/lib/ -Xlinker -ltcmalloc --build-path .build_gcd_tcmalloc $BUILDFLAGS
+    fi
   fi
   ;;
 debug)
