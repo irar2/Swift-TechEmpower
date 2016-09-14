@@ -1,6 +1,4 @@
 import Kitura
-import KituraNet
-import KituraSys
 
 let router = Router()
 
