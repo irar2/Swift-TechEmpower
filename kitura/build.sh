@@ -70,7 +70,7 @@ status)
   # Status about each build directory. Assuming for the moment that the first executable
   # found in each directory is representative (in terms of build date and Swift version)
   echo "Builds:"
-  BUILD_DIRS=`find .build*/release .build*/debug -prune -print 2>/dev/null`
+  BUILD_DIRS=`find .build*/release .build*/debug build*/release build*/debug -prune -print 2>/dev/null`
   for buildDir in $BUILD_DIRS; do
     SOME_EXE=`find $buildDir/* -type f -print -o -prune 2>/dev/null | grep -v '\.\(swift\|dylib\|so\)' | head -n1`
     case $OSNAME in
