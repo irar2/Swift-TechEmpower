@@ -46,6 +46,30 @@ request, response, next in
     try response.end()
 }
 
+// Get a random row
+fileprivate func getRandomRow() -> (JSON?, NSError?) {
+    var jsonRes: JSON? = nil
+    var errRes: NSError? = nil
+    #if os(Linux)
+        let rnd = Int(random() % dbRows) + 1
+    #else
+        let rnd = Int(arc4random_uniform(UInt32(dbRows))) + 1
+    #endif
+    world.retrieve("\(rnd)") {
+        (json: JSON?, err: NSError?) in
+        if let err = err {
+            errRes = err
+            print("Error: \(err.localizedDescription) Code: \(err.code), rnd=\(rnd)")
+        }
+        guard let json = json else {
+            print("Error: no result returned for record \(rnd)")
+            return
+        }
+        jsonRes = JSON(["_id":json["_id"], "randomNumber":json["randomNumber"]])
+    }
+    return (jsonRes, errRes)
+}
+
 // TechEmpower test 2: Single database query
 router.get("/db") {
 request, response, next in
@@ -53,29 +77,55 @@ request, response, next in
     // Convert to object using object-relational mapping (ORM) tool
     // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
 
-#if os(Linux)
-        let rnd = Int(random() % dbRows) + 1
-#else
-        let rnd = Int(arc4random_uniform(UInt32(dbRows)))
-#endif
-    world.retrieve("\(rnd)") {
-      (json: JSON?, err: NSError?) in
-      if let err = err {
-        print("Error: \(err.localizedDescription) Code: \(err.code), rnd=\(rnd)")
+    var result = getRandomRow()
+    if let json = result.0 {
+      response.status(.OK).send(json: json)
+    } else {
+        guard let err = result.1 else {
+            print("Unknown error")
+            return
+        }
         response.status(.badRequest).send("Error: \(err.localizedDescription) Code: \(err.code)")
-        return
-      }
-      guard let json = json else {
-        print("Error: no result returned for record \(rnd)")
-        response.status(.badRequest).send("Error: no result returned for record \(rnd)")
-        return
-      }
-      //response.status(.OK).send(json: json)
-      // Dispose of '_rev' field
-      response.status(.OK).send(json: JSON(["_id":json["_id"], "randomNumber":json["randomNumber"]]))
     }
     // next()
     // Avoid slowdown walking remaining routes
+    try response.end()
+}
+
+// TechEmpower test 3: Multiple database queries
+// Get param provides number of queries: /queries?queries=N
+// N times { 
+//   Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
+//   Convert to object using object-relational mapping (ORM) tool
+// }
+// Serialize objects to JSON - example: [{"id":4174,"randomNumber":331},{"id":51,"randomNumber":6544},{"id":4462,"randomNumber":952},{"id":2221,"randomNumber":532},{"id":9276,"randomNumber":3097},{"id":3056,"randomNumber":7293},{"id":6964,"randomNumber":620},{"id":675,"randomNumber":6601},{"id":8414,"randomNumber":6569},{"id":2753,"randomNumber":4065}]
+router.get("/queries") {
+request, response, next in
+    //var numQueries = 10
+    guard let queriesParam = request.queryParameters["queries"] else {
+        response.status(.badRequest).send("Error: queries param missing")
+        return
+    }
+    guard let numQueries = Int(queriesParam) else {
+        response.status(.badRequest).send("Error: could not parse \(queriesParam) as an integer")
+        return
+    }
+    var results: [JSON] = []
+    for i in 1...numQueries {
+        var result = getRandomRow()
+        if let json = result.0 {
+            results.append(json)
+        } else {
+            guard let err = result.1 else {
+                print("Unknown error")
+                return
+            }
+            response.status(.badRequest).send("Error: \(err.localizedDescription) Code: \(err.code)")
+            return
+        }
+    }
+    // Return JSON representation of array of results
+    response.status(.OK).send(json: JSON(results))
     try response.end()
 }
 
