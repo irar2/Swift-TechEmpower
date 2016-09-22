@@ -1,0 +1,12 @@
+diff --git a/Sources/Net.swift b/Sources/Net.swift
+index 238fde9..d458573 100644
+--- a/Sources/Net.swift
++++ b/Sources/Net.swift
+@@ -63,6 +63,7 @@ public struct SocketFileDescriptor {
+ 	#endif
+         var one = Int32(1)
+         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, UInt32(MemoryLayout<Int32>.size))
++setsockopt(fd, Int32(IPPROTO_TCP), TCP_NODELAY, &one, UInt32(MemoryLayout<Int32>.size))
+ 	#if os(OSX)
+ 		setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, UInt32(MemoryLayout<Int32>.size));
+ 	#endif
