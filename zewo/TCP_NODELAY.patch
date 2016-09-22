@@ -1,0 +1,20 @@
+diff --git a/Sources/tcp.c b/Sources/tcp.c
+index 37d7a86..1ea3ec4 100644
+--- a/Sources/tcp.c
++++ b/Sources/tcp.c
+@@ -32,6 +32,7 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <unistd.h>
++#include <linux/tcp.h>
+ 
+ #include "debug.h"
+ #include "ip.h"
+@@ -83,6 +84,7 @@ static void mill_tcptune(int s) {
+     /*  Allow re-using the same local address rapidly. */
+     opt = 1;
+     rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
++    rc = setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof (opt));
+     mill_assert(rc == 0);
+     /* If possible, prevent SIGPIPE signal when writing to the connection
+      already closed by the peer. */
