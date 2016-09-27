@@ -13,6 +13,7 @@ if [ -z "$1" ]; then
   echo "  - for devel, optional 2nd argument is branch name to switch dependencies to"
   echo " or status (to show status of packages and builds)"
   echo "Optionally add --clean"
+  echo " or --name=<build_dir_name>"
   exit 1
 fi
 
@@ -43,14 +44,27 @@ if [ "$2" = "--clean" ]; then
   fi
 fi
 
+# Rename build dir if requested
+BUILDPATH_FLAG=""
+if [[ "$2" == --name=* ]]; then
+  BUILD_NAME="`echo $2 | cut -d'=' -f2`"
+  BUILDPATH_FLAG="--build-path=$BUILD_NAME"
+fi
+
 # Build type
 case "$1" in
 release)
   BUILDFLAGS="--configuration release"
-  swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+  swift build $KITURA_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
   if [ "Linux" = $OSNAME ]; then
-    echo "Building GCD version to .build_gcd"
-    KITURA_BUILDFLAGS="$KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH --build-path .build_gcd"
+    if [ ! -z "$BUILDPATH_FLAG" ]; then
+      BUILD_NAME="${BUILD_NAME}_gcd"
+    else
+      BUILD_NAME=".build_gcd"
+    fi
+    BUILDPATH_FLAG="--build-path=$BUILD_NAME"
+    echo "Building GCD version to $BUILD_NAME"
+    KITURA_BUILDFLAGS="$KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH $BUILDPATH_FLAG"
     swift build $KITURA_BUILDFLAGS $BUILDFLAGS
   fi
   ;;
