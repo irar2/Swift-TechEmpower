@@ -1,21 +1,19 @@
 import HTTPServer
-import ContentNegotiationMiddleware
-import JSONMediaType
-import Router
 
-let contentNegotiation = ContentNegotiationMiddleware(mediaTypes: [JSONMediaType()])
+let router = BasicRouter() { route in
 
-let router = Router(middleware: contentNegotiation) { router in
-
-    router.get("/plaintext") { _ in
-        return Response(body: "Hello, World!", headers: ["Content-Type": "text/plain"])
+    route.get("/plaintext") { _ in
+        return Response(headers: ["Content-Type": "text/plain"], body: "Hello, World!")
     }
 
-    router.get("/json") { _ in
-        let content: StructuredData = [
+    route.get("/json") { _ in
+        let content = [
             "message": "Hello, World!"
         ]
-        return Response(content: content)
+        return Response(content: content, contentType: .json)
     }
 }
-try Server(host: "0.0.0.0", port: 8080, reusePort: true, responder: router).start()
+
+let contentNegotiation = ContentNegotiationMiddleware(mediaTypes: [.json])
+
+try Server(host: "0.0.0.0", port: 8080, reusePort: true, middleware: [contentNegotiation], responder: router).start()
