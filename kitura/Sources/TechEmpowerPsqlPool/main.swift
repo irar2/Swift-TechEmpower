@@ -23,10 +23,11 @@ let connectionString = "host=\(dbHost) port=\(dbPort) dbname=\(dbName) user=\(db
 let dbRows = 10000
 let maxValue = 10000
 
-// Connect to Postgres DB
-func newConn() -> PGConnection {
-  let dbConn = PGConnection()
-  let status = dbConn.connectdb(connectionString)
+// Create a connection pool suitable for driving high load
+let dbConnPool = Pool<PGConnection>(capacity: 20, limit: 50, timeout: 10000) {
+//let dbConnPool = Pool<PGConnection>(capacity: 4, limit: 4, timeout: 10000) {
+ let dbConn = PGConnection()
+ let status = dbConn.connectdb(connectionString)
   guard status == .ok else {
     print("DB refused connection, status \(status)")
     exit(1)
@@ -47,7 +48,15 @@ request, response, next in
 #else
         let rnd = Int(arc4random_uniform(UInt32(dbRows)))
 #endif
-    let dbConn = newConn()
+    // Get a dedicated connection object for this transaction from the pool
+    guard let dbConn = dbConnPool.take() else {
+      try response.status(.badRequest).send("Timed out waiting for a DB connection from the pool").end()
+      return
+    }
+    // Ensure that when we complete, the connection is returned to the pool
+    defer {
+      dbConnPool.give(dbConn)
+    }
     let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
     let result = dbConn.exec(statement: query)
     guard result.status() == PGResult.StatusType.tuplesOK else {
@@ -80,7 +89,7 @@ request, response, next in
 // Create table 
 router.get("/create") {
 request, response, next in
-    let dbConn = newConn()
+    let dbConn = dbConnPool.take()!
     let query = "CREATE TABLE \"World\" ("
         + "id integer NOT NULL,"
         + "\"randomNumber\" integer NOT NULL default 0,"
@@ -91,6 +100,7 @@ request, response, next in
       try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()
       return
     }
+    dbConnPool.give(dbConn)
     response.send("<h3>Table 'World' created</h3>")
     next()
 }
@@ -98,13 +108,14 @@ request, response, next in
 // Delete table
 router.get("/delete") {
 request, response, next in
-    let dbConn = newConn()
+    let dbConn = dbConnPool.take()!
     let query = "DROP TABLE IF EXISTS \"World\";"
     let result = dbConn.exec(statement: query)
     guard result.status() == PGResult.StatusType.commandOK else {
       try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()
       return
     }
+    dbConnPool.give(dbConn)
     response.send("<h3>Table 'World' deleted</h3>")
     next()
 }
@@ -112,7 +123,7 @@ request, response, next in
 // Populate DB with 10k rows
 router.get("/populate") {
 request, response, next in
-    let dbConn = newConn()
+    let dbConn = dbConnPool.take()!
     response.status(.OK).send("<h3>Populating World table with \(dbRows) rows</h3><pre>")
     for i in 1...dbRows {
 #if os(Linux)
@@ -128,6 +139,7 @@ request, response, next in
       }
       response.send(".")
     }
+    dbConnPool.give(dbConn)
     response.send("</pre><p>Done.</p>")
     next()
 }

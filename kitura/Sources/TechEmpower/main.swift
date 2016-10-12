@@ -1,5 +1,9 @@
 import Kitura
 import SwiftyJSON
+import LoggerAPI
+import HeliumLogger
+
+//Log.logger = HeliumLogger(.warning)
 
 let router = Router()
 
