@@ -37,21 +37,21 @@ let dbConnPool = Pool<PGConnection>(capacity: 20, limit: 50, timeout: 10000) {
 
 let router = Router()
 
-// TechEmpower test 2: Single database query
-router.get("/db") {
-request, response, next in
-    // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
-    // Convert to object using object-relational mapping (ORM) tool
-    // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
-#if os(Linux)
+// Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
+// Convert to object using object-relational mapping (ORM) tool
+// Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
+fileprivate func getRandomRow() -> (JSON?, AppError?) {
+    var jsonRes: JSON? = nil
+    var errRes: AppError? = nil
+    #if os(Linux)
         let rnd = Int(random() % dbRows) + 1
-#else
-        let rnd = Int(arc4random_uniform(UInt32(dbRows)))
-#endif
+    #else
+        let rnd = Int(arc4random_uniform(UInt32(dbRows))) + 1
+    #endif
     // Get a dedicated connection object for this transaction from the pool
     guard let dbConn = dbConnPool.take() else {
-      try response.status(.badRequest).send("Timed out waiting for a DB connection from the pool").end()
-      return
+      errRes = AppError.OtherError("Timed out waiting for a DB connection from the pool")
+      return (jsonRes, errRes)
     }
     // Ensure that when we complete, the connection is returned to the pool
     defer {
@@ -60,30 +60,87 @@ request, response, next in
     let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
     let result = dbConn.exec(statement: query)
     guard result.status() == PGResult.StatusType.tuplesOK else {
-      try response.status(.badRequest).send("Failed query: '\(query)' - status \(result.status())").end()
-      return
+      errRes = AppError.DBError("Query failed - status \(result.status())", query: query)
+      return (jsonRes, errRes)
     }
     guard result.numTuples() == 1 else {
-      try response.status(.badRequest).send("Error: query '\(query)' returned \(result.numTuples()) rows, expected 1").end()
-      return
+      errRes = AppError.DBError("Query returned \(result.numTuples()) rows, expected 1", query: query)
+      return (jsonRes, errRes)
     }
     guard result.numFields() == 1 else {
-      try response.status(.badRequest).send("Error: expected single randomNumber field but query returned: \(result.numFields()) fields").end()
-      return
+      errRes = AppError.DBError("Expected single randomNumber field but query returned: \(result.numFields()) fields", query: query)
+      return (jsonRes, errRes)
     }
     guard let randomStr = result.getFieldString(tupleIndex: 0, fieldIndex: 0) else {
-      try response.status(.badRequest).send("Error: could not get field as a String").end()
-      return
+      errRes = AppError.DBError("Error: could not get field as a String", query: query)
+      return (jsonRes, errRes)
     }
     if let randomNumber = Int(randomStr) {
-      response.status(.OK).send(json: JSON(["id":"\(rnd)", "randomNumber":"\(randomNumber)"]))
+      jsonRes = JSON(["id":"\(rnd)", "randomNumber":"\(randomNumber)"])
     } else {
-      try response.status(.badRequest).send("Error: could not parse result as a number: \(randomStr)").end()
-      return
+      errRes = AppError.DataFormatError("Error: could not parse result as a number: \(randomStr)")
     }
-    // next()
-    // Avoid slowdown walking remaining routes
-    try response.end()
+    return (jsonRes, errRes)
+}
+
+// TechEmpower test 2: Single database query
+router.get("/db") {
+request, response, next in
+    // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
+    // Convert to object using object-relational mapping (ORM) tool
+    // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
+
+    var result = getRandomRow()
+    guard let json = result.0 else {
+        guard let err = result.1 else {
+            Log.error("Unknown Error")
+            try response.status(.badRequest).send("Unknown error").end()
+            return
+        }
+        Log.error("\(err)")
+        try response.status(.badRequest).send("Error: \(err)").end()
+        return
+    }
+    try response.status(.OK).send(json: json).end()
+}
+
+// TechEmpower test 3: Multiple database queries
+// Get param provides number of queries: /queries?queries=N
+// N times { 
+//   Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
+//   Convert to object using object-relational mapping (ORM) tool
+// }
+// Serialize objects to JSON - example: [{"id":4174,"randomNumber":331},{"id":51,"randomNumber":6544},{"id":4462,"randomNumber":952},{"id":2221,"randomNumber":532},{"id":9276,"randomNumber":3097},{"id":3056,"randomNumber":7293},{"id":6964,"randomNumber":620},{"id":675,"randomNumber":6601},{"id":8414,"randomNumber":6569},{"id":2753,"randomNumber":4065}]
+router.get("/queries") {
+request, response, next in
+    //var numQueries = 10
+    guard let queriesParam = request.queryParameters["queries"] else {
+        Log.error("queries param missing")
+        try response.status(.badRequest).send("Error: queries param missing").end()
+        return
+    }
+    guard let numQueries = Int(queriesParam) else {
+        Log.error("could not parse \(queriesParam) as an integer")
+        try response.status(.badRequest).send("Error: could not parse \(queriesParam) as an integer").end()
+        return
+    }
+    var results: [JSON] = []
+    for i in 1...numQueries {
+        var result = getRandomRow()
+        guard let json = result.0 else {
+            guard let err = result.1 else {
+                Log.error("Unknown Error")
+                try response.status(.badRequest).send("Unknown error").end()
+                return
+            }
+            Log.error("\(err)")
+            try response.status(.badRequest).send("Error: \(err)").end()
+            return
+        }
+        results.append(json)
+    }
+    // Return JSON representation of array of results
+    try response.status(.OK).send(json: JSON(results)).end()
 }
 
 // Create table 

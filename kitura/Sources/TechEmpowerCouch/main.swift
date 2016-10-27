@@ -2,12 +2,16 @@ import Kitura
 import SwiftyJSON
 import Foundation
 import CouchDB
+import LoggerAPI
+import HeliumLogger
 
 #if os(Linux)
     import Glibc
 #else
     import Darwin
 #endif
+
+//Log.logger = HeliumLogger(.warning)
 
 // Connection properties for testing Cloudant or CouchDB instance
 let connProperties = ConnectionProperties(
@@ -24,27 +28,6 @@ let maxValue = 10000
 let world = couchDBClient.database(dbName)
 
 let router = Router()
-
-// TechEmpower test 0: plaintext
-router.get("/plaintext") {
-request, response, next in
-    response.headers["Content-Type"] = "text/plain"
-    response.status(.OK).send("Hello, world!")
-    // next()
-    // Avoid slowdown walking remaining routes
-    try response.end()
-}
-
-// TechEmpower test 1: JSON serialization
-router.get("/json") {
-request, response, next in
-    var result = JSON(["message":"Hello, World!"])
-    response.headers["Server"] = "Kitura-TechEmpower"
-    response.status(.OK).send(json: result)
-    // next()
-    // Avoid slowdown walking remaining routes
-    try response.end()
-}
 
 // Get a random row
 fileprivate func getRandomRow() -> (JSON?, NSError?) {
