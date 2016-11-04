@@ -13,8 +13,8 @@ import HeliumLogger
 
 //Log.logger = HeliumLogger(.warning)
 
-let dbHost = "localhost"
-let dbPort = Int32(5432)
+let dbHost = ProcessInfo.processInfo.environment["DB_HOST"] ?? "localhost"
+let dbPort = Int(ProcessInfo.processInfo.environment["DB_PORT"] ?? "5432") ?? 5432
 let dbName = "hello_world"
 let dbUser = "benchmarkdbuser"
 let dbPass = "benchmarkdbpass"
@@ -25,7 +25,6 @@ let maxValue = 10000
 
 // Create a connection pool suitable for driving high load
 let dbConnPool = Pool<PGConnection>(capacity: 20, limit: 50, timeout: 10000) {
-//let dbConnPool = Pool<PGConnection>(capacity: 4, limit: 4, timeout: 10000) {
  let dbConn = PGConnection()
  let status = dbConn.connectdb(connectionString)
   guard status == .ok else {
@@ -76,7 +75,7 @@ fileprivate func getRandomRow() -> (JSON?, AppError?) {
       return (jsonRes, errRes)
     }
     if let randomNumber = Int(randomStr) {
-      jsonRes = JSON(["id":"\(rnd)", "randomNumber":"\(randomNumber)"])
+      jsonRes = JSON(["id":rnd, "randomNumber":randomNumber])
     } else {
       errRes = AppError.DataFormatError("Error: could not parse result as a number: \(randomStr)")
     }
