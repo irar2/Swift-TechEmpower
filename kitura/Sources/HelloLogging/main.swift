@@ -14,7 +14,7 @@ import HeliumLogger
 #endif
 
 // Enable warnings
-Log.logger = HeliumLogger(.debug)
+Log.logger = HeliumLogger(.warning)
 
 let router = Router()
 
