@@ -18,24 +18,15 @@ Log.logger = HeliumLogger(.warning)
 
 let router = Router()
 
-// Simple plaintext response
+// Simple plaintext response with an expensive debug level log message
+// Logging level is checked before making the call to avoid String construction
 router.get("/plaintext") {
 request, response, next in
     response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
-    // next()
-    // Avoid slowdown walking remaining routes
-    try response.end()
-}
-
-// Simple plaintext response with an expensive debug level log message
-router.get("/plaintext2") {
-request, response, next in
-    response.headers["Content-Type"] = "text/plain"
-    response.status(.OK).send("Hello, world!")
-    Log.debug("This might be expensive \(arc4random_uniform(100))")
-    // next()
-    // Avoid slowdown walking remaining routes
+    if Log.isLogging(.debug) {
+        Log.debug("This might be expensive \(arc4random_uniform(100))")
+    }
     try response.end()
 }
 
