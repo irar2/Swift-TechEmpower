@@ -2,6 +2,7 @@ import Kitura
 import SwiftyJSON
 import LoggerAPI
 import HeliumLogger
+import Foundation
 
 #if os(Linux)
     import SwiftGlibc
@@ -28,6 +29,14 @@ request, response, next in
     try response.end()
 }
 
+func expensiveFunction() -> String {
+    var data = Data()
+    for i in 1...20 {
+      data.append("Foo Bar \(i) ".data(using: .utf8)!)
+    }
+    return "Blah"
+}
+
 // Simple plaintext response with an expensive debug level log message
 router.get("/plaintext2") {
 request, response, next in
@@ -37,14 +46,6 @@ request, response, next in
     // next()
     // Avoid slowdown walking remaining routes
     try response.end()
-}
-
-function expensiveFunction() -> String {
-    var data = Data()
-    for i in 1...20 {
-      data.append("Foo Bar ".data(using: .utf8)!)
-    }
-    return "Blah"
 }
 
 Kitura.addHTTPServer(onPort: 8080, with: router)
