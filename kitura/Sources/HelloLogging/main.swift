@@ -33,10 +33,18 @@ router.get("/plaintext2") {
 request, response, next in
     response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
-    Log.debug("This might be expensive \(arc4random_uniform(100))")
+    Log.debug("Expensive function says: \(expensiveFunction())")
     // next()
     // Avoid slowdown walking remaining routes
     try response.end()
+}
+
+function expensiveFunction() -> String {
+    var data = Data()
+    for i in 1...20 {
+      data.append("Foo Bar ".data(using: .utf8)!)
+    }
+    return "Blah"
 }
 
 Kitura.addHTTPServer(onPort: 8080, with: router)

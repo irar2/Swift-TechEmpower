@@ -2,6 +2,7 @@ import Kitura
 import SwiftyJSON
 import LoggerAPI
 import HeliumLogger
+import Foundation
 
 #if os(Linux)
     import SwiftGlibc
@@ -18,13 +19,23 @@ Log.logger = HeliumLogger(.warning)
 
 let router = Router()
 
-// Simple plaintext response with an expensive warning level log message
-// Uses optional property on Log to avoid String creation (short-circuit)
+func banana() -> String {
+    var data = Data()
+    data.append("Foo Bar".data(using: .utf8)!)
+    data.append("Foo Bar".data(using: .utf8)!)
+    data.append("Foo Bar".data(using: .utf8)!)
+    data.append("Foo Bar".data(using: .utf8)!)
+    data.append("Foo Bar".data(using: .utf8)!)
+    data.append("Foo Bar".data(using: .utf8)!)
+    return String(data: data, encoding: .utf8)!
+}
+
+// Simple plaintext response with an expensive debug level log message
 router.get("/plaintext") {
 request, response, next in
     response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
-    Log.Warning?.warning("This might be expensive \(arc4random_uniform(100))")
+    Log.debug("This might be expensive \(banana())")
     try response.end()
 }
 
