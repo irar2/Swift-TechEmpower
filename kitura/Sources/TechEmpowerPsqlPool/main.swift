@@ -39,8 +39,8 @@ let router = Router()
 // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
 // Convert to object using object-relational mapping (ORM) tool
 // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
-fileprivate func getRandomRow() -> (JSON?, AppError?) {
-    var jsonRes: JSON? = nil
+fileprivate func getRandomRow() -> ([String:Int]?, AppError?) {
+    var resultDict: [String:Int]? = nil
     var errRes: AppError? = nil
     #if os(Linux)
         let rnd = Int(random() % dbRows) + 1
@@ -50,7 +50,7 @@ fileprivate func getRandomRow() -> (JSON?, AppError?) {
     // Get a dedicated connection object for this transaction from the pool
     guard let dbConn = dbConnPool.take() else {
       errRes = AppError.OtherError("Timed out waiting for a DB connection from the pool")
-      return (jsonRes, errRes)
+      return (resultDict, errRes)
     }
     // Ensure that when we complete, the connection is returned to the pool
     defer {
@@ -60,26 +60,26 @@ fileprivate func getRandomRow() -> (JSON?, AppError?) {
     let result = dbConn.exec(statement: query)
     guard result.status() == PGResult.StatusType.tuplesOK else {
       errRes = AppError.DBError("Query failed - status \(result.status())", query: query)
-      return (jsonRes, errRes)
+      return (resultDict, errRes)
     }
     guard result.numTuples() == 1 else {
       errRes = AppError.DBError("Query returned \(result.numTuples()) rows, expected 1", query: query)
-      return (jsonRes, errRes)
+      return (resultDict, errRes)
     }
     guard result.numFields() == 1 else {
       errRes = AppError.DBError("Expected single randomNumber field but query returned: \(result.numFields()) fields", query: query)
-      return (jsonRes, errRes)
+      return (resultDict, errRes)
     }
     guard let randomStr = result.getFieldString(tupleIndex: 0, fieldIndex: 0) else {
       errRes = AppError.DBError("Error: could not get field as a String", query: query)
-      return (jsonRes, errRes)
+      return (resultDict, errRes)
     }
     if let randomNumber = Int(randomStr) {
-      jsonRes = JSON(["id":rnd, "randomNumber":randomNumber])
+      resultDict = ["id":rnd, "randomNumber":randomNumber]
     } else {
       errRes = AppError.DataFormatError("Error: could not parse result as a number: \(randomStr)")
     }
-    return (jsonRes, errRes)
+    return (resultDict, errRes)
 }
 
 // TechEmpower test 2: Single database query
@@ -90,7 +90,7 @@ request, response, next in
     // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
 
     var result = getRandomRow()
-    guard let json = result.0 else {
+    guard let dict = result.0 else {
         guard let err = result.1 else {
             Log.error("Unknown Error")
             try response.status(.badRequest).send("Unknown error").end()
@@ -100,7 +100,7 @@ request, response, next in
         try response.status(.badRequest).send("Error: \(err)").end()
         return
     }
-    try response.status(.OK).send(json: json).end()
+    try response.status(.OK).send(json: JSON(dict)).end()
 }
 
 // TechEmpower test 3: Multiple database queries
@@ -123,10 +123,10 @@ request, response, next in
         try response.status(.badRequest).send("Error: could not parse \(queriesParam) as an integer").end()
         return
     }
-    var results: [JSON] = []
+    var results: [[String:Int]] = []
     for i in 1...numQueries {
         var result = getRandomRow()
-        guard let json = result.0 else {
+        guard let dict = result.0 else {
             guard let err = result.1 else {
                 Log.error("Unknown Error")
                 try response.status(.badRequest).send("Unknown error").end()
@@ -136,7 +136,7 @@ request, response, next in
             try response.status(.badRequest).send("Error: \(err)").end()
             return
         }
-        results.append(json)
+        results.append(dict)
     }
     // Return JSON representation of array of results
     try response.status(.OK).send(json: JSON(results)).end()
