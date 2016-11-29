@@ -56,7 +56,7 @@ fileprivate func getRandomRow() -> (JSON?, AppError?) {
     defer {
       dbConnPool.give(dbConn)
     }
-    let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
+    let query = "SELECT randomNumber FROM World WHERE id=\(rnd)"
     let result = dbConn.exec(statement: query)
     guard result.status() == PGResult.StatusType.tuplesOK else {
       errRes = AppError.DBError("Query failed - status \(result.status())", query: query)
@@ -146,9 +146,9 @@ request, response, next in
 router.get("/create") {
 request, response, next in
     let dbConn = dbConnPool.take()!
-    let query = "CREATE TABLE \"World\" ("
+    let query = "CREATE TABLE World ("
         + "id integer NOT NULL,"
-        + "\"randomNumber\" integer NOT NULL default 0,"
+        + "randomNumber integer NOT NULL default 0,"
         + "PRIMARY KEY  (id)"
         + ");"
     let result = dbConn.exec(statement: query)
@@ -187,7 +187,7 @@ request, response, next in
 #else
       let rnd = Int(arc4random_uniform(UInt32(maxValue)))
 #endif
-      let query = "INSERT INTO \"World\" (id, \"randomNumber\") VALUES (\(i), \(rnd));"
+      let query = "INSERT INTO World (id, randomNumber) VALUES (\(i), \(rnd));"
       let result = dbConn.exec(statement: query)
       guard result.status() == PGResult.StatusType.commandOK else {
         try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()

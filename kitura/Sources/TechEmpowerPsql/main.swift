@@ -13,8 +13,8 @@ import HeliumLogger
 
 //Log.logger = HeliumLogger(.warning)
 
-let dbHost = "localhost"
-let dbPort = Int32(5432)
+let dbHost = ProcessInfo.processInfo.environment["DB_HOST"] ?? "localhost"
+let dbPort = Int(ProcessInfo.processInfo.environment["DB_PORT"] ?? "5432") ?? 5432
 let dbName = "hello_world"
 let dbUser = "benchmarkdbuser"
 let dbPass = "benchmarkdbpass"
@@ -48,7 +48,7 @@ request, response, next in
         let rnd = Int(arc4random_uniform(UInt32(dbRows)))
 #endif
     let dbConn = newConn()
-    let query = "SELECT \"randomNumber\" FROM \"World\" WHERE id=\(rnd)"
+    let query = "SELECT randomNumber FROM World WHERE id=\(rnd)"
     let result = dbConn.exec(statement: query)
     guard result.status() == PGResult.StatusType.tuplesOK else {
       try response.status(.badRequest).send("Failed query: '\(query)' - status \(result.status())").end()
@@ -81,9 +81,9 @@ request, response, next in
 router.get("/create") {
 request, response, next in
     let dbConn = newConn()
-    let query = "CREATE TABLE \"World\" ("
+    let query = "CREATE TABLE World ("
         + "id integer NOT NULL,"
-        + "\"randomNumber\" integer NOT NULL default 0,"
+        + "randomNumber integer NOT NULL default 0,"
         + "PRIMARY KEY  (id)"
         + ");"
     let result = dbConn.exec(statement: query)
@@ -120,7 +120,7 @@ request, response, next in
 #else
       let rnd = Int(arc4random_uniform(UInt32(maxValue)))
 #endif
-      let query = "INSERT INTO \"World\" (id, \"randomNumber\") VALUES (\(i), \(rnd));"
+      let query = "INSERT INTO World (id, randomNumber) VALUES (\(i), \(rnd));"
       let result = dbConn.exec(statement: query)
       guard result.status() == PGResult.StatusType.commandOK else {
         try response.status(.badRequest).send("<pre>Error: query '\(query)' - status \(result.status())</pre>").end()
