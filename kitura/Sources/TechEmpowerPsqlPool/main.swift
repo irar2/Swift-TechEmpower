@@ -11,7 +11,7 @@ import HeliumLogger
     import Darwin
 #endif
 
-//Log.logger = HeliumLogger(.warning)
+//Log.logger = HeliumLogger(.info)
 
 let dbHost = ProcessInfo.processInfo.environment["DB_HOST"] ?? "localhost"
 let dbPort = Int(ProcessInfo.processInfo.environment["DB_PORT"] ?? "5432") ?? 5432
@@ -23,30 +23,44 @@ let connectionString = "host=\(dbHost) port=\(dbPort) dbname=\(dbName) user=\(db
 let dbRows = 10000
 let maxValue = 10000
 
+// Prepare SQL statements
+var queryPrep = "PREPARE tfbquery (int) AS SELECT randomNumber FROM World WHERE id=$1"
+var updatePrep = "PREPARE tfbupdate (int, int) AS UPDATE World SET randomNumber=$2 WHERE id=$1"
+
 // Create a connection pool suitable for driving high load
 let dbConnPool = Pool<PGConnection>(capacity: 20, limit: 50, timeout: 10000) {
- let dbConn = PGConnection()
- let status = dbConn.connectdb(connectionString)
+  let dbConn = PGConnection()
+  let status = dbConn.connectdb(connectionString)
   guard status == .ok else {
-    print("DB refused connection, status \(status)")
-    exit(1)
+    fatalError("DB refused connection, status \(status)")
+  }
+  var result = dbConn.exec(statement: queryPrep)
+  guard result.status() == PGResult.StatusType.commandOK else {
+    fatalError("Unable to prepare tfbquery - status \(result.status())")
+  }
+  result = dbConn.exec(statement: updatePrep)
+  guard result.status() == PGResult.StatusType.commandOK else {
+    fatalError("Unable to prepare tfbupdate - status \(result.status())")
   }
   return dbConn
 }
 
-let router = Router()
+// Return a random number within the range of rows in the database
+private func randomNumber(_ maxVal: Int) -> Int {
+#if os(Linux)
+    return Int(random() % maxVal) + 1
+#else
+    return Int(arc4random_uniform(UInt32(maxVal))) + 1
+#endif
+}
 
 // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
 // Convert to object using object-relational mapping (ORM) tool
 // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
-fileprivate func getRandomRow() -> ([String:Int]?, AppError?) {
+private func getRandomRow() -> ([String:Int]?, AppError?) {
     var resultDict: [String:Int]? = nil
     var errRes: AppError? = nil
-    #if os(Linux)
-        let rnd = Int(random() % dbRows) + 1
-    #else
-        let rnd = Int(arc4random_uniform(UInt32(dbRows))) + 1
-    #endif
+    let rnd = randomNumber(dbRows)
     // Get a dedicated connection object for this transaction from the pool
     guard let dbConn = dbConnPool.take() else {
       errRes = AppError.OtherError("Timed out waiting for a DB connection from the pool")
@@ -56,8 +70,9 @@ fileprivate func getRandomRow() -> ([String:Int]?, AppError?) {
     defer {
       dbConnPool.give(dbConn)
     }
-    let query = "SELECT randomNumber FROM World WHERE id=\(rnd)"
+    let query = "EXECUTE tfbquery(\(rnd))"
     let result = dbConn.exec(statement: query)
+    //Log.info("\(query) => \(result.status())")
     guard result.status() == PGResult.StatusType.tuplesOK else {
       errRes = AppError.DBError("Query failed - status \(result.status())", query: query)
       return (resultDict, errRes)
@@ -82,13 +97,51 @@ fileprivate func getRandomRow() -> ([String:Int]?, AppError?) {
     return (resultDict, errRes)
 }
 
-// TechEmpower test 2: Single database query
+// Updates a row of World to a new value.
+private func updateRow(id: Int) throws {
+    // Get a dedicated connection object for this transaction from the pool
+    guard let dbConn = dbConnPool.take() else {
+      throw AppError.OtherError("Timed out waiting for a DB connection from the pool")
+    }
+    // Ensure that when we complete, the connection is returned to the pool
+    defer {
+      dbConnPool.give(dbConn)
+    }
+    let rndValue = randomNumber(maxValue)
+    let query = "EXECUTE tfbupdate(\(id), \(rndValue))"
+    let result = dbConn.exec(statement: query)
+    //Log.info("\(query) => \(result.status())")
+    guard result.status() == PGResult.StatusType.commandOK else {
+      throw AppError.DBError("Query failed - status \(result.status())", query: query)
+    }
+}
+
+let router = Router()
+
+//
+// TechEmpower test 6: plaintext
+//
+router.get("/plaintext") {
+request, response, next in
+    response.headers["Content-Type"] = "text/plain"
+    try response.status(.OK).send("Hello, world!").end()
+}
+
+//
+// TechEmpower test 1: JSON serialization
+//
+router.get("/json") {
+request, response, next in
+    var result = JSON(["message":"Hello, World!"])
+    response.headers["Server"] = "Kitura-TechEmpower"
+    try response.status(.OK).send(json: result).end()
+}
+
+//
+// TechEmpower test 2: Single database query (raw, no ORM)
+//
 router.get("/db") {
 request, response, next in
-    // Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
-    // Convert to object using object-relational mapping (ORM) tool
-    // Serialize object to JSON - example: {"id":3217,"randomNumber":2149}
-
     var result = getRandomRow()
     guard let dict = result.0 else {
         guard let err = result.1 else {
@@ -103,26 +156,14 @@ request, response, next in
     try response.status(.OK).send(json: JSON(dict)).end()
 }
 
-// TechEmpower test 3: Multiple database queries
+//
+// TechEmpower test 3: Multiple database queries (raw, no ORM)
 // Get param provides number of queries: /queries?queries=N
-// N times { 
-//   Get a random row (range 1 to 10,000) from DB: id(int),randomNumber(int)
-//   Convert to object using object-relational mapping (ORM) tool
-// }
-// Serialize objects to JSON - example: [{"id":4174,"randomNumber":331},{"id":51,"randomNumber":6544},{"id":4462,"randomNumber":952},{"id":2221,"randomNumber":532},{"id":9276,"randomNumber":3097},{"id":3056,"randomNumber":7293},{"id":6964,"randomNumber":620},{"id":675,"randomNumber":6601},{"id":8414,"randomNumber":6569},{"id":2753,"randomNumber":4065}]
+//
 router.get("/queries") {
 request, response, next in
-    //var numQueries = 10
-    guard let queriesParam = request.queryParameters["queries"] else {
-        Log.error("queries param missing")
-        try response.status(.badRequest).send("Error: queries param missing").end()
-        return
-    }
-    guard let numQueries = Int(queriesParam) else {
-        Log.error("could not parse \(queriesParam) as an integer")
-        try response.status(.badRequest).send("Error: could not parse \(queriesParam) as an integer").end()
-        return
-    }
+    let queriesParam = request.queryParameters["queries"] ?? "1"
+    let numQueries = min(Int(queriesParam) ?? 1, 500)
     var results: [[String:Int]] = []
     for i in 1...numQueries {
         var result = getRandomRow()
@@ -138,6 +179,47 @@ request, response, next in
         }
         results.append(dict)
     }
+    // Return JSON representation of array of results
+    try response.status(.OK).send(json: JSON(results)).end()
+}
+
+//
+// TechEmpower test 4: fortunes (TODO)
+//
+router.get("/fortunes") {
+request, response, next in
+    try response.status(.badRequest).send("Not yet implemented").end()
+}
+
+//
+// TechEmpower test 5: updates (raw, no ORM)
+//
+router.get("/updates") {
+request, response, next in
+    let queriesParam = request.queryParameters["queries"] ?? "1"
+    let numQueries = min(Int(queriesParam) ?? 1, 500)
+    var results: [[String:Int]] = []
+    for i in 1...numQueries {
+        var result = getRandomRow()
+        guard let dict = result.0 else {
+            guard let err = result.1 else {
+                Log.error("Unknown Error")
+                try response.status(.badRequest).send("Unknown error").end()
+                return
+            }
+            Log.error("\(err)")
+            try response.status(.badRequest).send("Error: \(err)").end()
+            return
+        }
+        do {
+            try updateRow(id: dict["id"]!)
+        } catch let err as AppError {
+            try response.status(.badRequest).send("Error: \(err)").end()
+            return
+        }
+        results.append(dict)
+    }
+
     // Return JSON representation of array of results
     try response.status(.OK).send(json: JSON(results)).end()
 }
