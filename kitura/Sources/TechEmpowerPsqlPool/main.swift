@@ -13,6 +13,7 @@ let router = Router()
 //
 router.get("/plaintext") {
 request, response, next in
+    response.headers["Server"] = "Kitura"
     response.headers["Content-Type"] = "text/plain"
     try response.status(.OK).send("Hello, world!").end()
 }
@@ -22,8 +23,8 @@ request, response, next in
 //
 router.get("/json") {
 request, response, next in
+    response.headers["Server"] = "Kitura"
     var result = JSON(["message":"Hello, World!"])
-    response.headers["Server"] = "Kitura-TechEmpower"
     try response.status(.OK).send(json: result).end()
 }
 
@@ -32,6 +33,7 @@ request, response, next in
 //
 router.get("/db") {
 request, response, next in
+    response.headers["Server"] = "Kitura"
     var result = getRandomRow()
     guard let dict = result.0 else {
         guard let err = result.1 else {
@@ -52,8 +54,9 @@ request, response, next in
 //
 router.get("/queries") {
 request, response, next in
+    response.headers["Server"] = "Kitura"
     let queriesParam = request.queryParameters["queries"] ?? "1"
-    let numQueries = min(Int(queriesParam) ?? 1, 500)
+    let numQueries = max(1, min(Int(queriesParam) ?? 1, 500))      // Snap to range of 1-500 as per test spec
     var results: [[String:Int]] = []
     for i in 1...numQueries {
         var result = getRandomRow()
@@ -78,6 +81,7 @@ request, response, next in
 //
 router.get("/fortunes") {
 request, response, next in
+    response.headers["Server"] = "Kitura"
     try response.status(.badRequest).send("Not yet implemented").end()
 }
 
@@ -86,8 +90,9 @@ request, response, next in
 //
 router.get("/updates") {
 request, response, next in
+    response.headers["Server"] = "Kitura"
     let queriesParam = request.queryParameters["queries"] ?? "1"
-    let numQueries = min(Int(queriesParam) ?? 1, 500)
+    let numQueries = max(1, min(Int(queriesParam) ?? 1, 500))      // Snap to range of 1-500 as per test spec
     var results: [[String:Int]] = []
     for i in 1...numQueries {
         var result = getRandomRow()
