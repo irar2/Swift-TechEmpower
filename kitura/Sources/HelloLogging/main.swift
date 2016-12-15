@@ -4,18 +4,8 @@ import LoggerAPI
 import HeliumLogger
 import Foundation
 
-#if os(Linux)
-    import SwiftGlibc
-
-    public func arc4random_uniform(_ max: UInt32) -> Int32 {
-        return (SwiftGlibc.rand() % Int32(max-1)) + 1
-    }
-#else
-    import Darwin
-#endif
-
 // Enable warnings
-Log.logger = HeliumLogger(.warning)
+Log.logger = HeliumLogger(.info)
 
 let router = Router()
 
@@ -24,11 +14,10 @@ router.get("/plaintext") {
 request, response, next in
     response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
-    // next()
-    // Avoid slowdown walking remaining routes
     try response.end()
 }
 
+// Artificially expensive function to call while interpolating a log message
 func expensiveFunction() -> String {
     var data = Data()
     for i in 1...20 {
@@ -43,8 +32,6 @@ request, response, next in
     response.headers["Content-Type"] = "text/plain"
     response.status(.OK).send("Hello, world!")
     Log.debug("Expensive function says: \(expensiveFunction())")
-    // next()
-    // Avoid slowdown walking remaining routes
     try response.end()
 }
 

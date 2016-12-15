@@ -2,8 +2,11 @@ import Kitura
 import SwiftyJSON
 import LoggerAPI
 import HeliumLogger
+import Foundation
 
-//Log.logger = HeliumLogger(.warning)
+//Log.logger = HeliumLogger(.info)
+
+let port = Int(ProcessInfo.processInfo.environment["PORT"] ?? "8080") ?? 8080
 
 let router = Router()
 
@@ -28,5 +31,5 @@ request, response, next in
     try response.end()
 }
 
-Kitura.addHTTPServer(onPort: 8080, with: router)
+Kitura.addHTTPServer(onPort: port, with: router)
 Kitura.run()
