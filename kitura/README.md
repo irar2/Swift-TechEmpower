@@ -79,7 +79,7 @@ swiftenv install
 
 Install dependencies:
 ```
-sudo apt-get install clang libicu-dev libcurl4-openssl-dev libssl-dev
+sudo apt-get install clang libicu-dev libcurl4-openssl-dev libssl-dev libpq-dev
 ```
 Either build via the provided `build.sh` script:
 ```
