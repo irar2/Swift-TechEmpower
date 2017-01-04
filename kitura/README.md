@@ -9,7 +9,7 @@ The `TechEmpowerPsqlPool` target requires a database, for which you can follow t
 
 # Initial Setup
 
-### Install Postgres
+## Install Postgres
 
 ```
 apt-get install postgresql
@@ -46,10 +46,93 @@ Add an entry to enable access from a specific host or subnet, for example:
 host    hello_world  benchmarkdbuser  192.168.0.0/24  password
 ```
 
+## Install workload driver
+
+Install the build dependencies:
+```
+sudo apt-get install gcc make
+```
+Clone and build:
+```
+git clone https://github.com/wg/wrk.git
+cd wrk
+make
+```
+
+This will build the `wrk` tool. You may want to add the wrk executable to your path or to `/usr/local/bin`:
+```
+sudo cp wrk /usr/local/bin
+```
+
+## Install Swiftenv (optional)
+
+Swiftenv makes it easy to obtain the Swift binary which has been tested with this project.
+See: https://github.com/kylef/swiftenv
+
+### Install Swift binary
+
+```
+swiftenv install
+```
+
+## Build Kitura application
+
+Install dependencies:
+```
+sudo apt-get install clang libicu-dev libcurl4-openssl-dev libssl-dev
+```
+Either build via the provided `build.sh` script:
+```
+./build.sh release --clean
+```
+Or using SPM directly:
+```
+swift build -c release
+```
+
 # Driving Benchmark
 
-In separate terminal windows:
+In separate terminal windows, start Kitura, and then start the workload driver:
 ```
 env DB_HOST="localhost" DB_PORT="5432" .build/release/TechEmpowerPsqlPool
-wrk -c128 -t16 -d30s http://127.0.0.1:8080/db
+wrk -c128 -t4 -d30s http://127.0.0.1:8080/db
 ```
+This example exercises the Single Database Query test against the local Postgres database.
+
+## TechEmpower tests
+
+Below are the driver commands which approximate the TechEmpower benchmark suite:
+
+### Test 1 (JSON)
+```
+wrk -H 'Host: localhost' -H 'Accept: application/json,text/html;q=0.9,application/xhtml+xml;q=0.9,application/xml;q=0.8,*/*;q=0.7' -H 'Connection: keep-alive' --latency -d 15 -c 8 --timeout 8 -t 2 http://127.0.0.1:8080/json
+```
+This runs the workload driver with 8 concurrent connections (`-c 8`). TechEmpower tests with 8, 16, 32, 64, 128 and 256 connections.
+
+### Test 2 (DB)
+```
+wrk -H 'Host: localhost' -H 'Accept: application/json,text/html;q=0.9,application/xhtml+xml;q=0.9,application/xml;q=0.8,*/*;q=0.7' -H 'Connection: keep-alive' --latency -d 15 -c 8 --timeout 8 -t 2 http://127.0.0.1:8080/db
+```
+This runs the workload driver with 8 concurrent connections (`-c 8`). TechEmpower tests with 8, 16, 32, 64, 128 and 256 connections.
+
+### Test 3 (Queries)
+```
+wrk -H 'Host: localhost' -H 'Accept: application/json,text/html;q=0.9,application/xhtml+xml;q=0.9,application/xml;q=0.8,*/*;q=0.7' -H 'Connection: keep-alive' --latency -d 15 -c 256 --timeout 8 -t 2 http://127.0.0.1:8080/queries?queries=1
+```
+This runs the workload driver with 256 concurrent connections, and a single DB query per request (`?queries=1`). TechEmpower tests with 1, 5, 10, 15 and 20 queries per request.
+
+### Test 5 (Updates)
+```
+wrk -H 'Host: localhost' -H 'Accept: application/json,text/html;q=0.9,application/xhtml+xml;q=0.9,application/xml;q=0.8,*/*;q=0.7' -H 'Connection: keep-alive' --latency -d 15 -c 256 --timeout 8 -t 2 http://127.0.0.1:8080/updates?queries=1
+```
+This runs the workload driver with 256 concurrent connections, and a single DB query/update operation per request (`?queries=1`). TechEmpower tests with 1, 5, 10, 15 and 20 queries per request.
+
+### Test 6 (Plaintext)
+```
+wrk -H 'Host: localhost' -H 'Accept: text/plain,text/html;q=0.9,application/xhtml+xml;q=0.9,application/xml;q=0.8,*/*;q=0.7' -H 'Connection: keep-alive' --latency -d 15 -c 256 --timeout 8 -t 2 http://127.0.0.1:8080/plaintext -s ~/pipeline.lua -- 16
+```
+This runs the workload driver with 256 concurrent connections (`-c 256`). TechEmpower tests with 256, 1024, 4096 and 16384 concurrent connections.
+
+Note, TechEmpower uses HTTP Pipelining for the Plaintext test. This is implemented in a LUA script which is created by the script: https://github.com/TechEmpower/FrameworkBenchmarks/blob/master/toolset/setup/linux/client.sh
+
+At the time of writing, Kitura does not properly support HTTP pipelining; either omit the script argument (everything after `-s`) or change the number of requests pipelined (`-- 16`) to `1`.
