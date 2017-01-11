@@ -72,6 +72,7 @@ release)
   BUILDFLAGS="--configuration release"
   GCD_BUILDFLAGS="-Xswiftc -DGCD_ASYNCH"
   TCM_BUILDFLAGS="-Xlinker -L/usr/local/lib/ -Xlinker -ltcmalloc"
+  TCMM_BUILDFLAGS="-Xlinker -L/usr/lib/ -Xlinker -ltcmalloc_minimal"
   swift build $KITURA_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
   if [ "Linux" = $OSNAME ]; then
     if [ ! -z "$BUILDPATH_FLAG" ]; then
@@ -89,6 +90,14 @@ release)
         echo "Building GCD + tcmalloc version to ${BUILD_NAME}_gcd_tcmalloc"
         BUILDPATH_FLAG="--build-path=${BUILD_NAME}_gcd_tcmalloc"
         swift build $KITURA_BUILDFLAGS $TCM_BUILDFLAGS $GCD_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+    fi
+    if [ -f /usr/lib/libtcmalloc_minimal.so ]; then
+        echo "Building tcmalloc_minimal version to ${BUILD_NAME}_tcmalloc_min"
+        BUILDPATH_FLAG="--build-path=${BUILD_NAME}_tcmalloc_min"
+        swift build $KITURA_BUILDFLAGS $TCMM_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+        echo "Building GCD + tcmalloc_minimal version to ${BUILD_NAME}_gcd_tcmalloc_min"
+        BUILDPATH_FLAG="--build-path=${BUILD_NAME}_gcd_tcmalloc_min"
+        swift build $KITURA_BUILDFLAGS $TCMM_BUILDFLAGS $GCD_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
     fi
   fi
   ;;
