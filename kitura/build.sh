@@ -70,17 +70,35 @@ fi
 case "$1" in
 release)
   BUILDFLAGS="--configuration release"
+  GCD_BUILDFLAGS="-Xswiftc -DGCD_ASYNCH"
+  TCM_BUILDFLAGS="-Xlinker -L/usr/local/lib/ -Xlinker -ltcmalloc"
+  TCMM_BUILDFLAGS="-Xlinker -L/usr/lib/ -Xlinker -ltcmalloc_minimal"
   swift build $KITURA_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
   if [ "Linux" = $OSNAME ]; then
     if [ ! -z "$BUILDPATH_FLAG" ]; then
-      BUILD_NAME="${BUILD_NAME}_gcd"
+      BUILD_NAME="${BUILD_NAME}"
     else
-      BUILD_NAME=".build_gcd"
+      BUILD_NAME=".build"
     fi
-    BUILDPATH_FLAG="--build-path=$BUILD_NAME"
-    echo "Building GCD version to $BUILD_NAME"
-    KITURA_BUILDFLAGS="$KITURA_BUILDFLAGS -Xswiftc -DGCD_ASYNCH $BUILDPATH_FLAG"
-    swift build $KITURA_BUILDFLAGS $BUILDFLAGS
+    echo "Building GCD version to ${BUILD_NAME}_gcd"
+    BUILDPATH_FLAG="--build-path=${BUILD_NAME}_gcd"
+    swift build $KITURA_BUILDFLAGS $GCD_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+    if [ -f /usr/local/lib/libtcmalloc.so ]; then
+        echo "Building tcmalloc version to ${BUILD_NAME}_tcmalloc"
+        BUILDPATH_FLAG="--build-path=${BUILD_NAME}_tcmalloc"
+        swift build $KITURA_BUILDFLAGS $TCM_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+        echo "Building GCD + tcmalloc version to ${BUILD_NAME}_gcd_tcmalloc"
+        BUILDPATH_FLAG="--build-path=${BUILD_NAME}_gcd_tcmalloc"
+        swift build $KITURA_BUILDFLAGS $TCM_BUILDFLAGS $GCD_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+    fi
+    if [ -f /usr/lib/libtcmalloc_minimal.so ]; then
+        echo "Building tcmalloc_minimal version to ${BUILD_NAME}_tcmalloc_min"
+        BUILDPATH_FLAG="--build-path=${BUILD_NAME}_tcmalloc_min"
+        swift build $KITURA_BUILDFLAGS $TCMM_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+        echo "Building GCD + tcmalloc_minimal version to ${BUILD_NAME}_gcd_tcmalloc_min"
+        BUILDPATH_FLAG="--build-path=${BUILD_NAME}_gcd_tcmalloc_min"
+        swift build $KITURA_BUILDFLAGS $TCMM_BUILDFLAGS $GCD_BUILDFLAGS $BUILDFLAGS $BUILDPATH_FLAG
+    fi
   fi
   ;;
 debug)
