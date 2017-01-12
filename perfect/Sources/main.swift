@@ -130,14 +130,27 @@ fileprivate func getRandomRow() -> (Any?, AppError?) {
 // Register your own routes and handlers
 var routes = Routes()
 
-// Simple plaintext test for Perfect
+// TechEmpower test #6: Plaintext
 routes.add(method: .get, uri: "/plaintext", handler: {
-		request, response in
+	request, response in
 		response.setHeader(.contentType, value: "text/plain")
 		response.appendBody(string: "Hello, World!")
 		response.completed()
 	}
 )
+
+// TechEmpower test #1: JSON 
+routes.add(method: .get, uri: "/json", handler: {
+    request, response in
+        response.setHeader(.custom(name: "Server"), value: "Perfect")
+        response.setHeader(.contentType, value: "application/json")
+        do { 
+            try response.setBody(json: ["message":"Hello, World!"])
+        } catch let error {
+            log.error(message: "Could not encode JSON: \(error)")
+        }
+        response.completed()
+})
 
 // TechEmpower test
 routes.add(method: .get, uri: "/db", handler: {
@@ -174,34 +187,6 @@ routes.add(method: .get, uri: "/db", handler: {
     }
 
     response.completed()
-})
-
-// Simple JSON test for Perfect
-routes.add(method: .get, uri: "/json", handler: {
-	request, response in
-	var firstPlace = 0
-	var secondPlace = 0.0
-	var thirdPlace = 0
-
-	let encoded = "{\"2nd Place\":230.45,\"1st Place\":300,\"3rd Place\":150}"
-	guard let decoded = try? encoded.jsonDecode() as? [String:Any] else {
-		return
-	}
-
-	for (key, value) in decoded! {
-		switch key {
-			case "1st Place":
-			firstPlace = value as! Int
-			case "2nd Place":
-			secondPlace = value as! Double
-			case "3rd Place":
-			thirdPlace = value as! Int
-			default:
-			break
-		}
-	}
-
-	log.info(message: "The top scores are: " + "First Place: " + "\(firstPlace)" + " Points" + "Second Place: " + "\(secondPlace)" + " Points" + "Third Place: " + "\(thirdPlace)" + " Points")
 })
 
 // Add the routes to the server.
