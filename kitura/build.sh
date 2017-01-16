@@ -28,7 +28,7 @@ if [ -z "$1" ]; then
   echo "  - for devel, optional 2nd argument is branch name to switch dependencies to"
   echo " or status (to show status of packages and builds)"
   echo "Optionally add --clean"
-  echo " or --name=<build_dir_name>"
+  echo " or --name=<build_dir_name> or --build-path=<build_dir_name>"
   exit 1
 fi
 
@@ -51,23 +51,40 @@ Darwin)
   exit 1
 esac
 
+BUILD_NAME=".build"
+BUILDPATH_FLAG=""
+COMMAND="status"
+
+# Consume optional flags
+for ARG in $*; do
+  LHS=`echo $ARG | cut -d'=' -f1`
+  echo $LHS
+  case $LHS in
+  "--clean"):
+    CLEAN=1
+    ;;
+  "--name"|"--build-path"):
+    BUILD_NAME="`echo $ARG | cut -d'=' -f2`"
+    BUILDPATH_FLAG="--build-path=$BUILD_NAME"
+    ;;
+  "release"|"debug"|"fetch"|"devel"|"status"):
+    COMMAND=$LHS
+    ;;
+  *)
+    echo "Unrecognized arg: $ARG"
+  esac
+done
+    
 # Clean if requested
-if [ "$2" = "--clean" ]; then
-  swift build --clean
+if [ $CLEAN ]; then
+  swift build $BUILDPATH_FLAG --clean
   if [ "Linux" = $OSNAME ]; then
-    rm -rf .build_gcd
+    swift build ${BUILDPATH_FLAG}_gcd --clean
   fi
 fi
 
-# Rename build dir if requested
-BUILDPATH_FLAG=""
-if [[ "$2" == --name=* ]]; then
-  BUILD_NAME="`echo $2 | cut -d'=' -f2`"
-  BUILDPATH_FLAG="--build-path=$BUILD_NAME"
-fi
-
 # Build type
-case "$1" in
+case "$COMMAND" in
 release)
   BUILDFLAGS="--configuration release"
   GCD_BUILDFLAGS="-Xswiftc -DGCD_ASYNCH"
@@ -131,12 +148,12 @@ status)
   done
   ;;
 *)
-  echo "Build type '$1' is not 'release' or 'debug', not building"
+  echo "'$COMMAND' not recognized"
 esac
 
 
 # For 'devel', convert dependencies to full clones, so that all branches are available
-case "$1" in
+case "$COMMAND" in
 devel)
   WORKDIR=$PWD
   for dir in `find Packages/* -type d -prune -print`; do
