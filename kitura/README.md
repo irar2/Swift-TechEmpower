@@ -1,8 +1,9 @@
 This project contains a number of targets:
 
-- `TechEmpower`: only implements test 6 (plaintext) and is intended for basic performance sanity testing. This target does not require a database and can be driven via the `/plaintext` URI.
+- `TechEmpower`: only implements test 6 (plaintext) and is intended for basic performance sanity testing. This target does not require a database and can be driven via the `http://localhost:8080/plaintext` URL.
 - `HelloLogging`: same plaintext test, but with logging enabled using `HeliumLogger` at the `.info` level. Intended to track the overheads of enabling logging at a level that would be used in production.
 - `HelloVerbose`: same plaintext test, but with logging at the `.verbose` level. Generates more significant log activity, intended to track the performance of the logger.
+- `HelloSSL`: same plaintext test, but with SSL enabled. The URL for this test is `https://localhost:8080/plaintext`
 - `TechEmpowerPsqlPool`: a work-in-progress implementation of the TechEmpower benchmarks on Kitura. It currently implements all benchmarks except for test 4 (Fortunes). It uses the Postgres database. There is currently no ORM support.
 
 The `TechEmpowerPsqlPool` target requires a database, for which you can follow the steps below.
