@@ -14,7 +14,31 @@
  * limitations under the License.
  */
 
+import Kitura
 import Foundation
+
+//
+// Returns an SSLConfig appropriate for either Linux or Mac.
+//
+func getSSLConfig() -> SSLConfig {
+#if os(Linux)
+    guard let myCertPath = getAbsolutePath(relativePath: "ssl/certificate.pem") else {
+        print("Error: could not find ssl/certificate.pem")
+        exit(1)
+    }
+    guard let myKeyPath = getAbsolutePath(relativePath: "ssl/key.pem") else {
+        print("Error: could not find ssl/key.pem")
+        exit(1)
+    }
+    return SSLConfig(withCACertificateDirectory: nil, usingCertificateFile: myCertPath, withKeyFile: myKeyPath, usingSelfSignedCerts: true)
+#else
+    guard let myCertPath = getAbsolutePath(relativePath: "ssl/certificate.pfx") else {
+        print("Error: could not find ssl/certificate.pfx")
+        exit(1)
+    }
+    return SSLConfig(withChainFilePath: myCertPath, withPassword:"password", usingSelfSignedCerts:true)
+#endif
+}
 
 //
 // Get the absolute path of a file by searching for it in:

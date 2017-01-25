@@ -31,16 +31,7 @@ let router = Router()
 print("processorCount=\(pi.processorCount) activeProcessorCount=\(pi.activeProcessorCount) physicalMemory=\(pi.physicalMemory)")
 print("file=\(#file)")        
 
-guard let myCertPath = getAbsolutePath(relativePath: "ssl/certificate.pem") else {
-  print("Error: could not find ssl/certificate.pem")
-  exit(1)
-}
-guard let myKeyPath = getAbsolutePath(relativePath: "ssl/key.pem") else {
-  print("Error: could not find ssl/key.pem")
-  exit(1)
-}
-
-let mySSLConfig =  SSLConfig(withCACertificateDirectory: nil, usingCertificateFile: myCertPath, withKeyFile: myKeyPath, usingSelfSignedCerts: true)
+let mySSLConfig = getSSLConfig()
 
 // TechEmpower test 6: plaintext
 router.get("/plaintext") {
