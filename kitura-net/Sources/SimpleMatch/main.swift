@@ -27,8 +27,10 @@ import Glibc
 class TechEmpowerDelegate: ServerDelegate {
     func handle(request: ServerRequest, response: ServerResponse) {
 
+      switch (request.urlString) {
+
         // TechEmpower test 6: plaintext
-        if request.urlString == "/plaintext" {
+        case "/plaintext":
 	    let payload = "Hello, world!"
 	    response.headers["Content-Type"] = ["text/plain"]
 	    response.headers["Content-Length"] = [String(payload.characters.count)]
@@ -40,10 +42,9 @@ class TechEmpowerDelegate: ServerDelegate {
 	    catch {
 		print("Failed to write the response. Error=\(error)")
 	    }
-        }
 
         // TechEmpower test 1: JSON serialization
-        if request.urlString == "/json" {
+        case "/json":
             let result = JSON(["message":"Hello, World!"])
             response.headers["Content-Type"] = ["application/json"]
             response.headers["Server"] = ["Kitura"]
@@ -57,7 +58,10 @@ class TechEmpowerDelegate: ServerDelegate {
 	    catch {
 		print("Failed to write the response. Error=\(error)")
 	    }
-        }
+        
+        default:
+            print("Unknown route") 
+      }
 
     }
 }
