@@ -18,6 +18,7 @@ import KituraNet
 import LoggerAPI
 import HeliumLogger
 import Foundation
+import SwiftyJSON
 
 import Glibc
 
@@ -41,14 +42,22 @@ class TechEmpowerDelegate: ServerDelegate {
 	    }
         }
 
-// TechEmpower test 1: JSON serialization
-// router.get("/json") {
-// request, response, next in
-//     var result = JSON(["message":"Hello, World!"])
-//     response.headers["Server"] = "Kitura"
-//     response.status(.OK).send(json: result)
-//     try response.end()
-// }
+        // TechEmpower test 1: JSON serialization
+        if request.urlString == "/json" {
+            let result = JSON(["message":"Hello, World!"])
+            response.headers["Content-Type"] = ["application/json"]
+            response.headers["Server"] = ["Kitura"]
+	    response.statusCode = .OK
+	    do {
+                let jsonData = try result.rawData(options:.prettyPrinted)
+	        response.headers["Content-Length"] = [String(jsonData.count)]
+	        try response.write(from: jsonData)
+		try response.end()
+	    }
+	    catch {
+		print("Failed to write the response. Error=\(error)")
+	    }
+        }
 
     }
 }
