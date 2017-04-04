@@ -5,8 +5,10 @@ This project contains a number of targets:
 - `HelloVerbose`: same plaintext test, but with logging at the `.verbose` level. Generates more significant log activity, intended to track the performance of the logger.
 - `HelloSSL`: same plaintext test, but with SSL enabled. The URL for this test is `https://localhost:8080/plaintext`
 - `TechEmpowerPsqlPool`: a work-in-progress implementation of the TechEmpower benchmarks on Kitura. It currently implements all benchmarks except for test 4 (Fortunes). It uses the Postgres database. There is currently no ORM support.
+- `TechEmpowerKuery`: a work-in-progress implementation of the TechEmpower benchmarks on Kitura using [Swift Kuery](https://github.com/IBM-Swift/Swift-Kuery). It currently implements all benchmarks except for test 4 (Fortunes). There is currently no ORM support. It supports all [plugins supported by Swift Kuery](https://github.com/IBM-Swift/Swift-Kuery#list-of-plugins) which can be switched between using the `DB` environment variable, which defaults to `postgresql`.
 
-The `TechEmpowerPsqlPool` target requires a database, for which you can follow the steps below.
+
+The `TechEmpowerPsqlPool` and `TechEmpowerKuery` (with `DB=postgresql`) targets requires a database, for which you can follow the steps below.
 
 # Initial Setup
 

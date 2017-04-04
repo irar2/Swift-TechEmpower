@@ -82,9 +82,10 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
     defer {
       dbConnPool.give(dbConn)
     }
+    
     let query = "EXECUTE tfbquery(\(rnd))"
     let result = dbConn.exec(statement: query)
-    //Log.info("\(query) => \(result.status())")
+
     guard result.status() == PGResult.StatusType.tuplesOK else {
       errRes = AppError.DBError("Query failed - status \(result.status())", query: query)
       return (resultDict, errRes)
