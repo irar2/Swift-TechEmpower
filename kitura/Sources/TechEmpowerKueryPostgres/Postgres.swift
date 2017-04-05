@@ -132,7 +132,7 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
             
             for row in resultSet.rows {
                 for value in row {
-                    guard let randomNumber = value as?kitura/Sources/TechEmpowerKuery/Postgres.swift Int else {
+                    guard let randomNumber = value as? Int else {
                         errRes = AppError.DBKueryError("Error: could not get field as an Int")
                         return
                     }
