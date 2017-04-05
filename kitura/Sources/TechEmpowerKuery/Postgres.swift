@@ -118,12 +118,16 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
             
             for row in resultSet.rows {
                 for value in row {
-                    guard let randomNumber = value as? Int else {
+                    if let unwrapped = value {
+                        guard let randomNumber = unwrapped as? Int32 else {
                         errRes = AppError.DBKueryError("Error: could not get field as an Int")
                         return
                     }
-                    
-                    resultDict = ["id":rnd, "randomNumber":randomNumber]
+                        resultDict = ["id":rnd, "randomNumber":Int(randomNumber)]
+                    } else {
+                        errRes = AppError.DBKueryError("Error: randomNumber value is nil")
+                    }
+
                 }
                 
             }
