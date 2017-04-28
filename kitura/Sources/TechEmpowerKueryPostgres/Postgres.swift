@@ -145,6 +145,7 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
             }
         }
     }
+    }
     return (resultDict, errRes)
 }
 
@@ -173,6 +174,4 @@ func updateRow(id: Int) throws  -> AppError? {
     }
     return errRes
 }
-
-
 
