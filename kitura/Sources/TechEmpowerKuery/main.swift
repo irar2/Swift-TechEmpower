@@ -192,11 +192,11 @@ router.get("/populate") {
     request, response, next in
     let dbConn = dbConnPool.getConnection()!
     response.status(.OK).send("<h3>Populating World table with \(dbRows) rows</h3><pre>")
+    let query = Insert(into: world, values: Parameter(), Parameter())
     for i in 1...dbRows {
         let rnd = randomNumberGenerator(maxValue)
-        let query = Insert(into: world, values: i, rnd)
         var dbResult : QueryResult!
-        dbConn.execute(query: query) { result in
+        dbConn.execute(query: query, parameters: [i, rnd]) { result in
             dbResult = result
         }
         

@@ -38,8 +38,11 @@ let dbRows = 10000
 let maxValue = 10000
 
 // Prepare SQL statements
-var queryPrep = "PREPARE tfbquery (int) AS SELECT randomNumber FROM World WHERE id=$1"
-var updatePrep = "PREPARE tfbupdate (int, int) AS UPDATE World SET randomNumber=$2 WHERE id=$1"
+//var queryPrep = "PREPARE tfbquery (int) AS SELECT randomNumber FROM World WHERE id=$1"
+//var updatePrep = "PREPARE tfbupdate (int, int) AS UPDATE World SET randomNumber=$2 WHERE id=$1"
+
+let select = "SELECT randomNumber FROM World WHERE id=$1"
+let update = "UPDATE World SET randomNumber=$1 WHERE id=$2"
 
 
 //class World: Table {
@@ -73,22 +76,22 @@ func generateConnection() -> Connection? {
         }
     }
     
-    dbConn.execute(queryPrep){ result in
-        if result.asResultSet != nil {
-            guard result.success else {
-                Log.error("Query failed - status \(String(describing: result.asError))")
-                return
-            }
-        }
-    }
-    dbConn.execute(updatePrep){ result in
-        if result.asResultSet != nil {
-            guard result.success else {
-                Log.error("Query failed - status \(String(describing: result.asError))")
-                return
-            }
-        }
-    }
+//    dbConn.execute(queryPrep){ result in
+//        if result.asResultSet != nil {
+//            guard result.success else {
+//                Log.error("Query failed - status \(String(describing: result.asError))")
+//                return
+//            }
+//        }
+//    }
+//    dbConn.execute(updatePrep){ result in
+//        if result.asResultSet != nil {
+//            guard result.success else {
+//                Log.error("Query failed - status \(String(describing: result.asError))")
+//                return
+//            }
+//        }
+//    }
     
     return dbConn
 }
@@ -121,9 +124,7 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
     }
     let rnd = randomNumberGenerator(dbRows)
     
-    let query = "EXECUTE tfbquery(\(rnd))"
-    
-    dbConn.execute(query) { result in
+    dbConn.execute(select, parameters: [rnd]) { result in
         if let resultSet = result.asResultSet {
             guard result.success else {
                 errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
@@ -160,9 +161,8 @@ func updateRow(id: Int) throws  -> AppError? {
         releaseConnection(connection: dbConn)
     }
     let rndValue = randomNumberGenerator(maxValue)
-    let query = "EXECUTE tfbupdate(\(id), \(rndValue))"
     var errRes: AppError? = nil
-    dbConn.execute(query) { result in
+    dbConn.execute(update, parameters: [rndValue, id]) { result in
         if result.asResultSet != nil {
             guard result.success else {
                 errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
