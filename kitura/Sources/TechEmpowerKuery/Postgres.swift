@@ -46,14 +46,13 @@ class World: Table {
 
 let world = World()
 
-//var update = Update(world, set: [(world.randomNumber, randomNumberGenerator(maxValue))])
-//    .where(world.id == randomNumberGenerator(dbRows))
-
-var select = Select(world.randomNumber, from: world)
-    .where(world.id == Parameter())
-var update = Update(world, set: [(world.randomNumber, Parameter())])
+var selectQuery = Select(world.randomNumber, from: world)
+     .where(world.id == Parameter())
+var updateQuery = Update(world, set: [(world.randomNumber, Parameter())])
     .where(world.id == Parameter())
 
+var select: PreparedStatement?
+var update: PreparedStatement?
 
 let dbConnPoolOpts = ConnectionPoolOptions(initialCapacity: 20, maxCapacity: 50, timeout:10000)
 
@@ -72,12 +71,18 @@ func generateConnection() -> Connection? {
                                       options: [.databaseName(dbName),
                                                 .userName(dbUser), .password(dbPass) ])
     }
-    
-    
+   
     dbConn.connect() { error in
         if let error = error {
             print(error)
             return
+        }
+        do {
+            select = try dbConn.prepareStatement(selectQuery)
+            update = try dbConn.prepareStatement(updateQuery)
+        }
+        catch {
+            print(error)
         }
     }
     return dbConn
@@ -109,15 +114,16 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
     defer {
         releaseConnection(connection: dbConn)
     }
+
     let rnd = randomNumberGenerator(dbRows)
 
-    dbConn.execute(query: select, parameters: [rnd]) { result in
+    dbConn.execute(preparedStatement: select!, parameters: [rnd]) { result in
+        guard result.success else {
+            errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
+            print("Query failed - status \(String(describing: result.asError))")
+            return
+        }
         if let resultSet = result.asResultSet {
-            guard result.success else {
-                errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
-                return
-            }
-            
             for row in resultSet.rows {
                 for value in row {
                     if let unwrapped = value {
@@ -129,9 +135,7 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
                     } else {
                         errRes = AppError.DBKueryError("Error: randomNumber value is nil")
                     }
-
                 }
-                
             }
         }
     }
@@ -141,7 +145,7 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
 // Updates a row of World to a new value.
 func updateRow(id: Int) throws  -> AppError? {
     // Get a dedicated connection object for this transaction from the pool
-    guard let dbConn = dbConnPool.getConnection() else {
+   guard let dbConn = dbConnPool.getConnection() else {
         throw AppError.OtherError("Timed out waiting for a DB connection from the pool")
     }
     // Ensure that when we complete, the connection is returned to the pool
@@ -150,18 +154,13 @@ func updateRow(id: Int) throws  -> AppError? {
     }
     let rndValue = randomNumberGenerator(maxValue)
     var errRes: AppError? = nil
-    dbConn.execute(query: update, parameters: [rndValue, id]) { result in
-        if result.asResultSet != nil {
-            guard result.success else {
-                errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
-                return
-            }
-            
+    dbConn.execute(preparedStatement: update!, parameters: [rndValue, id]) { result in
+        guard result.success else {
+            errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
+    	    print("Query failed - status \(String(describing: result.asError))")
+            return
         }
-        
     }
     return errRes
 }
-
-
 
