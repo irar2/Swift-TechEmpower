@@ -145,7 +145,7 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
 // Updates a row of World to a new value.
 func updateRow(id: Int) throws  -> AppError? {
     // Get a dedicated connection object for this transaction from the pool
-   guard let dbConn = dbConnPool.getConnection() else {
+    guard let dbConn = dbConnPool.getConnection() else {
         throw AppError.OtherError("Timed out waiting for a DB connection from the pool")
     }
     // Ensure that when we complete, the connection is returned to the pool

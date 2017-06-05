@@ -194,9 +194,9 @@ router.get("/populate") {
     response.status(.OK).send("<h3>Populating World table with \(dbRows) rows</h3><pre>")
     for i in 1...dbRows {
         let rnd = randomNumberGenerator(maxValue)
-        let query = "INSERT INTO World (id, randomNumber) VALUES (\(i), \(rnd));"
+        let query = Insert(into: world, values: i, rnd)
         var dbResult : QueryResult!
-        dbConn.execute(query) { result in
+        dbConn.execute(query: query) { result in
             dbResult = result
         }
         
