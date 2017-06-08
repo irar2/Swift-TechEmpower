@@ -46,49 +46,36 @@ class World: Table {
 
 let world = World()
 
-var selectQuery = Select(world.randomNumber, from: world)
+let selectQuery = Select(world.randomNumber, from: world)
      .where(world.id == Parameter())
-var updateQuery = Update(world, set: [(world.randomNumber, Parameter())])
+let updateQuery = Update(world, set: [(world.randomNumber, Parameter())])
     .where(world.id == Parameter())
 
-var select: PreparedStatement?
-var update: PreparedStatement?
 
 let dbConnPoolOpts = ConnectionPoolOptions(initialCapacity: 20, maxCapacity: 50, timeout:10000)
+let dbConnPool = PostgreSQLConnection.createPool(host: dbHost, port: dbPort, options: [.databaseName(dbName), .userName(dbUser), .password(dbPass)], poolOptions: dbConnPoolOpts)
+
+let select = prepare(selectQuery)!
+let update = prepare(updateQuery)!
+
+func prepare(_ query: Query) -> PreparedStatement? {
+    guard let dbConn = dbConnPool.getConnection() else {
+        print("Failed to get connection")
+        return nil
+    }
+    do {
+        let stmt = try dbConn.prepareStatement(query)
+        return stmt
+    }
+    catch {
+        print(error)
+        return nil
+    }
+}
 
 func releaseConnection(connection: Connection) {
     connection.closeConnection()
 }
-
-func generateConnection() -> Connection? {
-    var dbConn: Connection
-    switch db {
-    case "sqlite":
-        dbConn = SQLiteConnection(filename: "myDB.db")
-    default:
-        // use postgres db by defualt
-        dbConn = PostgreSQLConnection(host: dbHost, port: dbPort,
-                                      options: [.databaseName(dbName),
-                                                .userName(dbUser), .password(dbPass) ])
-    }
-   
-    dbConn.connect() { error in
-        if let error = error {
-            print(error)
-            return
-        }
-        do {
-            select = try dbConn.prepareStatement(selectQuery)
-            update = try dbConn.prepareStatement(updateQuery)
-        }
-        catch {
-            print(error)
-        }
-    }
-    return dbConn
-}
-
-let dbConnPool = ConnectionPool(options: dbConnPoolOpts, connectionGenerator: generateConnection, connectionReleaser:releaseConnection)
 
 // Return a random number within the range of rows in the database
 func randomNumberGenerator(_ maxVal: Int) -> Int {
@@ -108,16 +95,13 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
     // Get a dedicated connection object for this transaction from the pool
     guard let dbConn = dbConnPool.getConnection() else {
         errRes = AppError.OtherError("Timed out waiting for a DB connection from the pool")
+        print("No connection")
         return (resultDict, errRes)
-    }
-    // Ensure that when we complete, the connection is returned to the pool
-    defer {
-        releaseConnection(connection: dbConn)
     }
 
     let rnd = randomNumberGenerator(dbRows)
 
-    dbConn.execute(preparedStatement: select!, parameters: [rnd]) { result in
+    dbConn.execute(preparedStatement: select, parameters: [rnd]) { result in
         guard result.success else {
             errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
             print("Query failed - status \(String(describing: result.asError))")
@@ -144,17 +128,13 @@ func getRandomRow() -> ([String:Int]?, AppError?) {
 
 // Updates a row of World to a new value.
 func updateRow(id: Int) throws  -> AppError? {
-    // Get a dedicated connection object for this transaction from the pool
+   // Get a dedicated connection object for this transaction from the pool
     guard let dbConn = dbConnPool.getConnection() else {
         throw AppError.OtherError("Timed out waiting for a DB connection from the pool")
     }
-    // Ensure that when we complete, the connection is returned to the pool
-    defer {
-        releaseConnection(connection: dbConn)
-    }
     let rndValue = randomNumberGenerator(maxValue)
     var errRes: AppError? = nil
-    dbConn.execute(preparedStatement: update!, parameters: [rndValue, id]) { result in
+    dbConn.execute(preparedStatement: update, parameters: [rndValue, id]) { result in
         guard result.success else {
             errRes = AppError.DBKueryError("Query failed - status \(String(describing: result.asError))")
     	    print("Query failed - status \(String(describing: result.asError))")
